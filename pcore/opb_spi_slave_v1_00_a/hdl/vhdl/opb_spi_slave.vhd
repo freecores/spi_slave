@@ -4,9 +4,14 @@
 --* 
 --* @generic C_FAMILY virtex-4 and generic supported
 --*    @author: Daniel Köthe
---*   @version: 1.0
---* @date: 2007-11-11
+--*   @version: 1.1
+--* @date: 2007-11-19
 --/
+-- Version 1.1
+-- Bugfix
+-- IRQ-Flag RX_Overflow shows prog_empty insteed rx_overflow
+-- opb_irq_flg(5) <= opb_fifo_flg(9); to opb_irq_flg(5) <= opb_fifo_flg(8); 
+
 -------------------------------------------------------------------------------
 
 library ieee;
@@ -529,7 +534,7 @@ begin  -- behavior
   -- Bit 4 : RX_FULL
   opb_irq_flg(4) <= opb_fifo_flg(7);
   -- Bit 5 : RX_Overflow
-  opb_irq_flg(5) <= opb_fifo_flg(9);
+  opb_irq_flg(5) <= opb_fifo_flg(8);
   -- Bit 6:  CS_H_TO_L
   opb_irq_flg(6) <= not opb_fifo_flg(12);
   -- Bit 7:  CS_L_TO_H
