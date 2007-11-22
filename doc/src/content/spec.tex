@@ -20,7 +20,7 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 \chapter{Core configuration}
 \begin{table} [h]
 	\centering
-		\begin{tabular} {|l|l|c|c|} \hline
+		\begin{tabularx} {160mm} {|l|l|c|X|} \hline
 			Description							& Parameter Name & Allowable Values	& Default Value	\\ \hline
 			\multicolumn{4} {|c|} {System Parameter} \\ \hline			
  		  Base address for OPB SPI& C\_BASEADDR		 & 0x00							& 0x00000000		\\ \hline
@@ -35,7 +35,7 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 			SPI Clock Phase				  & C\_CPHA				 & 0,1							&	0							\\ \hline
   		FIFO Size Width(TX/RX)\footnotemark[1]	& C\_FIFO\_DEPTH & 4-7							&	4  						\\ \hline
 			DMA\_EN			   				  & C\_DMA\_EN		 & true, false			&	false					\\ \hline	
-		\end{tabular}
+		\end{tabularx}
 	\caption{Generics}
 	\label{tab:Generics}
 \end{table}
@@ -47,14 +47,14 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 \chapter{IO-Ports}
 \begin{table} [h]
 	\centering
-		\begin{tabular}{|l|l|l|l|} \hline
+		\begin{tabularx} {160mm}{|l|l|l|X|} \hline
 		\textbf{Port}		& \textbf{width}	& \textbf{direction}	& \textbf{Description} \\ \hline
 		SPI\_SCLK				& 1		& input			& Serial clock input	\\
 		SPI\_MOSI				& 1		& input			& Master Out Slave in \\
 		SPI\_MISO				& 1 	& output		& Master in Slave out	\\
 		SPI\_SS					& 1		& input			& Slave select				\\ \hline
 		opb\_irq				& 1		& output		& IRQ Output					\\ \hline
-		\end{tabular}
+		\end{tabularx}
 	\caption{external ports}
 	\label{tab:externalPorts}
 \end{table}
@@ -63,7 +63,7 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 \section{Adressmap}
 \begin{table} [!h]
 	\centering
-		\begin{tabular}{|l|c|c|l|} \hline
+		\begin{tabularx} {160mm} {|l|c|c|X|} \hline
 		\textbf{Name}		& \textbf{Adress}	& \textbf{Acess}	& \textbf{Description} 				\\ \hline
 		SPI\_CR					& 0x00						& R/W							& SPI Control Register				\\ \hline
 		SPI\_SR					& 0x04						& R/W							& SPI  Status Register				\\ \hline
@@ -81,7 +81,7 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 		DGIE	  				& 0x40						& R/W							& Device global IRQ Enable Register	\\ \hline	
 		IPISR	   				& 0x44						& R/W							& IRQ Status Register	  			\\ \hline	
 		IPIER	   				& 0x48						& R/W							& IRQ Enable Register	  			\\ \hline			
-		\end{tabular}
+		\end{tabularx}
 	\caption{Address-Map}
 	\label{tab:registers}
 \end{table}
@@ -89,7 +89,7 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 \section{SPI\_CR}
 \begin{table} [!h]
 	\centering
-		\begin{tabular} {|l|c|c|c|l|} \hline
+		\begin{tabularx} {160mm}{|p{1.5cm}|p{3cm}|p{1.5cm}|p{1.5cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
 	  31							& DGE						& R/W						 & 0										& Device Global Enable				\\
 	  								&								&								 &											& 0: Disable 									\\
@@ -102,7 +102,9 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 	  								&								&								 &											& 1: Enable 	  							\\ \hline		 	
 	  29							& RESET					& R/W						 & 0										& Reset Device(self cleared)	\\
 	  								&								&								 &											& 0: Normal Operation					\\
-	  								&								&								 &											& 1: Reset SPI-Core(SR/FIFO)  \\ \hline			  		29..0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabular}
+	  								&								&								 &											& 1: Reset SPI-Core(SR/FIFO)  \\ \hline			  		
+	 28..0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														
+	 \end{tabularx}
 	\caption{SPI\_CR Register}
 	\label{tab:SPI_CR}
 \end{table}
@@ -111,7 +113,7 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 \section{SPI\_SR}
 \begin{table} [!h]
 	\centering
-		\begin{tabular} {|l|l|c|c|l|} \hline
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
 	  31							& TX Prog Full	& R							 & 0										& Prog Full Flag 	  					\\
 	  								&								&								 &											& 1: FIFO Prog Full 					\\ \hline
@@ -146,64 +148,140 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 	  								&								&								 &											& 1: CS\_N High								\\ \hline
 	  18							& TX DMA Done 	& R							 & 0										& Transmit DMA done						\\
 	  								&								&								 &											& 0: TX DMA in progress				\\ 
-	  								&								&								 &											& 1: TX DMA all Transfers done\\ \hline	  		  17							& RX DMA Done 	& R							 & 0										& Receive DMA done						\\
+	  								&								&								 &											& 1: TX DMA all Transfers done\\ \hline	  		  
+	  17							& RX DMA Done 	& R							 & 0										& Receive DMA done						\\
 	  								&								&								 &											& 0: RX DMA in progress				\\ 
 	  								&								&								 &											& 1: RX DMA all Transfers done\\ \hline	  	
- 		16..0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabular}
+ 		16:0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabularx}
 	\caption{SPI\_SR Register}
 	\label{tab:SPI_SR}
 \end{table}
 
-\newpage
 \section{TX\_THRESH}
 \begin{table}[!h]
 	\centering
-		\begin{tabular} {|l|l|c|c|l|} \hline
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset}				& \textbf{Description} 				\\ 
 										&								&								 & \textbf{Value}				&															\\ \hline		
-	  31..16					& TX\_THRESH\_PROG\_FULL 	& R/W	 & 0										& Transmit Prog Full Threshold\\
+	  31:16						& TX\_THRESH\_PROG\_FULL 	& R/W	 & 0										& Transmit Prog Full Threshold\\
 	  								&								&								 &											& [1..$2^{C\_FIFO\_DEPTH}-2$]	\\ \hline
-	  15..0						& TX\_THRESH\_PROG\_EMPTY	& R/W	 & 0										& Transmit Prog Empty	Threshold\\
+	  15:0						& TX\_THRESH\_PROG\_EMPTY	& R/W	 & 0										& Transmit Prog Empty	Threshold\\
 	  								&								&								 &											& [1..$2^{C\_FIFO\_DEPTH}-2$]	\\ \hline
-	\end{tabular}
+	\end{tabularx}
 	\caption{TX\_THRESH Register}
 	\label{tab:TX_THRESH}
 \end{table}
+
+This Register sets the Almost Full and Empty Flag Thresholds for Transmit FIFO. IF the DMA-Engine is used, the TX\_THRESH\_PROG\_EMPTY is used to trigger the DMA-Transfer. If Transmit FIFO is Almost Empty the Engine fills the FIFO with 16 Words(4..32bit). If the OPB-Bus is at medium or full load, increase Almost Empty Threshold to ensure there are ''some bytes reserve'' in Fifo until the DMA-Engine has access to the bus and can start transfer. Under light load condition a value of 4 should sufficient. 
 
 
 \section{RX\_THRESH}
 \begin{table}[!h]
 	\centering
-		\begin{tabular} {|l|l|c|c|l|} \hline
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset}				& \textbf{Description} 				\\
 										&								&								 & \textbf{Value}				&															\\ \hline
-	  31..16					& RX\_THRESH\_PROG\_FULL 	& R/W	 & 0										& Receive Prog Full Threshold	\\
+	  31:16						& RX\_THRESH\_PROG\_FULL 	& R/W	 & 0										& Receive Prog Full Threshold	\\
 	  								&								&								 &											& [1..$2^{C\_FIFO\_DEPTH}-2$] \\ \hline
-	  15..0						& RX\_THRESH\_PROG\_EMPTY	& R/W	 & 0										& Receive Prog Empty Threshold\\
-	  								&								&								 &											& [1..$2^{C\_FIFO\_DEPTH}-2$] \\ \hline					\end{tabular}
+	  15:0						& RX\_THRESH\_PROG\_EMPTY	& R/W	 & 0										& Receive Prog Empty Threshold\\
+	  								&								&								 &											& [1..$2^{C\_FIFO\_DEPTH}-2$] \\ \hline					\end{tabularx}
 	\caption{RX\_THRESH Register}
 	\label{tab:RX_THRESH}
 \end{table}
 
+This Register sets the Almost Full and Empty Flag Thresholds for Receive FIFO. IF the DMA-Engine is used, the RX\_THRESH\_PROG\_FULL is used to trigger the DMA-Transfer. Normally set this Threshold to the block size of 16. If the OPB-Bus is at medium or full load, increase the FIFO Size(C\_FIFO\_WIDTH) to ensure there are 'some bytes free'' in FIFO until overflow occurs.
 
-\section{DGIE}
+
+\section{TX\_DMA\_CTL}
 \begin{table} [!h]
 	\centering
-		\begin{tabular} {|l|c|c|c|l|} \hline
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
-	  31							& DGIE					& R/W						 & 0										& Global IRQ Ebable  					\\
+	  31							& TX\_DMA\_EN	  & R/W						 & 0										& Transmit DMA Enable					\\
 	  								&								&								 &											& 0: Disable 									\\
 	  								&								&								 &											& 1: Enable 	  							\\ \hline		
- 		29..0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabular}
-	\caption{DGIE Register}
-	\label{tab:dgie}
+ 		29:0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabularx}
+	\caption{TX\_DMA\_CTL Register}
+	\label{tab:tx_dma_ctl}
+\end{table}
+This Register is only available if C\_DMA\_EN is set.
+Set the Bit TX\_DMA\_EN to 1 to enable the Transmit DMA Engine. With Engine Start the Register TX\_DMA\_ADDR and TX\_DMA\_NUM are copied to internal register. Do not change this Registers if DMA Enable set.
+
+\section{TX\_DMA\_ADDR}
+\begin{table} [!h]
+	\centering
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
+		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
+	  31:0						& TX\_DMA\_Adr  & R/W						 & 0										& Transmit DMA Base Adress		\\ \hline
+	\end{tabularx}
+	\caption{TX\_DMA\_ADDR Register}
+	\label{tab:tx_dma_addr}
 \end{table}
 
-\newpage
+This Register is only available if C\_DMA\_EN is set. With this Register the Base-Adress of the TX-DMA is set. The Adress must 4 Byte aligned. Remark: For this memory area the Data-Chache of the Microblaze can be enabled, because the Cache is a Write-True type. Using a controller with write-back cache only the first write will written in memory, the second only in the internal cache.
+
+\section{TX\_DMA\_NUM}
+\begin{table} [!h]
+	\centering
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
+		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
+	  31:16						& TX\_DMA\_LEN  & R/W						 & 0										& TX DMA Number of Block Transfers		\\ \hline
+ 		15:0						& 	\multicolumn{4} {c|} {reserved} \\ \hline				
+	\end{tabularx}
+	\caption{TX\_DMA\_NUM Register}
+	\label{tab:tx_dma_len}
+\end{table}
+This Register is only available if C\_DMA\_EN is set. The Register set the Number of Blocktransfers. If all transfers done, the IRQ TX DMA Done asserted. The block size of the DMA is 16. A system configured with C\_SR\_WIDTH = 8 transfers 16 Bytes, if C\_SR\_WIDTH=32 64 Bytes are written to or read from the memory in one DMA-Cycle. 
+
+\section{RX\_DMA\_CTL}
+\begin{table} [!h]
+	\centering
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
+		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
+	  31							& RX\_DMA\_EN	  & R/W						 & 0										& Transmit DMA Enable					\\
+	  								&								&								 &											& 0: Disable 									\\
+	  								&								&								 &											& 1: Enable 	  							\\ \hline		
+ 		29:0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabularx}
+	\caption{RX\_DMA\_CTL Register}
+	\label{tab:RX_dma_ctl}
+\end{table}
+
+This Register is only available if C\_DMA\_EN is set. See Register TX\_DMA\_CTL for Description.
+
+
+\section{RX\_DMA\_ADDR}
+\begin{table} [!h]
+	\centering
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
+		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
+	  31:0						& RX\_DMA\_Adr  & R/W						 & 0										& Transmit DMA Base Adress		\\ \hline
+	\end{tabularx}
+	\caption{RX\_DMA\_ADDR Register}
+	\label{tab:RX_dma_addr}
+\end{table}
+
+This Register is only available if C\_DMA\_EN is set. See Register TX\_DMA\_ADDR for Description.
+\newline
+\fbox{\parbox{160mm} {Remark: Check RX\_DMA\_ADDR that is set to the right memory section. If wrong set, program-Code or date overwritten with SPI-Data!}}
+
+\section{RX\_DMA\_NUM}
+\begin{table} [!h]
+	\centering
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
+		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
+	  31:16						& RX\_DMA\_LEN  & R/W						 & 0										& RX DMA Number of Block Transfers		\\ \hline
+ 		15:0						& 	\multicolumn{4} {c|} {reserved} \\ \hline				
+	\end{tabularx}
+	\caption{RX\_DMA\_NUM Register}
+	\label{tab:RX_dma_len}
+\end{table}
+
+This Register is only available if C\_DMA\_EN is set. See Register TX\_DMA\_NUM for Description.
+
 \section{IPISR}
 \begin{table} [!h]
 	\centering
-		\begin{tabular} {|l|l|c|c|l|} \hline
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
 	  31							& TX\_Prog\_Empty & R/ToW\footnotemark[1]	 & 0										& IRQ Prog Empty Flag 	  		\\ \hline
 	  29							& TX\_Empty			& R/ToW					 & 0										& IRQ Full Flag 							\\ \hline
@@ -211,7 +289,7 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 	  27							& RX\_Full			& R/ToW 				 & 0										& IRQ Full Flag  							\\ \hline
 	  26							& SS\_FALL			& R/ToW					 & 0										& IRQ SS FALL Flag						\\ \hline
 	  25							& SS\_RISE			& R/ToW					 & 0										& IRQ SS RISE Flag						\\ \hline
- 		24..0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabular}
+ 		24..0						& 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabularx}
 	\caption{IPISR Register}
 	\label{tab:IPISR}
 \end{table}
@@ -221,7 +299,7 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 \section{IPISE}
 \begin{table} [!h]
 	\centering
-		\begin{tabular} {|l|l|c|c|l|} \hline
+		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}			& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
 	  31							& TX\_Prog\_Empty 	& R/W						 & 0										  & IRQ Prog Empty Enable 		\\ \hline
 	  29							& TX\_Empty					& R/W						 & 0										& IRQ Full Enable							\\ \hline
@@ -230,12 +308,12 @@ This document describe a SPI Slave core designed for the Xilinx EDK. \cite{bib_x
 	  26							& SS\_FALL	  			& R/W						 & 0										& IRQ SS FALL Enable 					\\ \hline
 	  25							& SS\_RISE					& R/W						 & 0										& IRQ SS RISE Enable				  \\ \hline
 	  24							& TX\_DMA\_DONE			& R/W						 & 0										& IRQ TX Transfer done	Enable\\ \hline
-	  23							& TX\_DMA\_DONE			& R/W						 & 0										& IRQ RX Transfer done	Enable\\ \hline	   	 22..0					 & 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabular}
+	  23							& TX\_DMA\_DONE			& R/W						 & 0										& IRQ RX Transfer done	Enable\\ \hline	   	 
+	  22..0					 & 	\multicolumn{4} {c|} {reserved} \\ \hline																														\end{tabularx}
 	\caption{IPISE Register}
 	\label{tab:IPISE}
 \end{table}
 
-1: IRQ enabled
 
 \chapter{System Integration}
 To integrate this IP-Core in your System, unzip the opb\_spi\_slave.zip to your project-directory. Then Rescan the user repository with \textit{Project $\rightarrow$ Rescan User Repositories}. This will take some seconds. After this you find the core in the \textit{IP Catalog $\rightarrow$ Project Repository}.
@@ -284,6 +362,7 @@ TIMEGRP "spi_out" OFFSET = OUT 14 ns AFTER "opb_spi_slave_0_sclk_pin" LOW ;
 
 \chapter{Operations}
 
+
 \chapter{Architecture}
 
 \begin{figure}[h]
@@ -293,118 +372,3 @@ TIMEGRP "spi_out" OFFSET = OUT 14 ns AFTER "opb_spi_slave_0_sclk_pin" LOW ;
 	\label{fig:blockdiagramm}
 \end{figure}
 
-\section{Serial Shift Register}
-\begin{table}[!h]
-	\centering
-		\begin{tabular} {|l|c|l|} \hline \rowcolor{yellow1}
-		\textbf{Signal}		& \textbf{Direction}& \textbf{Description}	\\ \hline
-		\multicolumn{3} {c|} {Generics} \\ \hline		
-		C\_SR\_WIDTH	 									& -									& Shift register width  \\ \hline	
-		C\_MSB\_FIRST  									& -									& Transfer MSB First		\\ \hline		
-		\multicolumn{3} {c|} {Global} \\ \hline			
-		rst					 										& input							& Async-Reset						\\ \hline		
-		\multicolumn{3} {c|} {External Interface} \\ \hline		
-		sclk														& input							& Serial clock input		\\ \hline
-		cs\_n														& input							& Chip Select						\\ \hline
-		mosi														& input							& Master Out Slave in 	\\ \hline
-		miso\_o													&	output						& Master in Slave out		\\ \hline
-		miso\_i													& input							& not used							\\ \hline
-		miso\_t													& output						& MISO Tristate		  		\\ \hline	
-		\multicolumn{3} {c|} {TX-FIFO (1)} \\ \hline	
-		sr\_tx\_clk											& output						& FIFO-TX CLK					\\ \hline
-		sr\_tx\_en  										& output						& FIFO-TX enable			\\ \hline	
-		sr\_tx\_data[C\_SR\_WIDTH:0]		& input							& FIFO-TX Data				\\ \hline
-		\multicolumn{3} {c|} {RX-FIFO (3)} \\ \hline	
-		sr\_rx\_clk											& output						& FIFO-RX CLK					\\ \hline
-		sr\_rx\_en  										& output						& FIFO-RX enable			\\ \hline	
-		sr\_rx\_data[C\_SR\_WIDTH:0]	  & output						& FIFO-RX Data				\\ \hline
-		\end{tabular}
-	\caption{Serial-Register}
-	\label{tab:SerialRegister}
-\end{table}
-\clearpage
-
-\section{FIFO}
-\begin{table}[!h]
-	\centering
-		\begin{tabular} {|l|c|l|} \hline \rowcolor{yellow1}
-		\textbf{Signal}							& \textbf{Direction}& \textbf{Description}	\\ \hline
-		\multicolumn{3} { c|} {Generics} \\ \hline		
-		C\_FIFO\_WIDTH 							& -									& Shift register width  \\ \hline	
-		C\_FIFO\_SIZE								& -									& FIFO Size Width				\\ \hline
-		C\_SYNC\_TO									& -									& FIFO Sync Flags to Clock \\ \hline
-		\multicolumn{3} { c|} {Global} \\ \hline	
-		rst					 								& input							& Async-Reset						\\ \hline	
-		\multicolumn{3} { c|} {Write-Port (2,3)} 				\\ \hline	
-		wr\_clk											& input							& FIFO Write CLK				\\ \hline
-		wr\_en  										& input							& FIFO Write enable			\\ \hline	
-		din[C\_FIFO\_WIDTH:0]				& input							& FIFO Write data				\\ \hline
-		\multicolumn{3} { c|} {READ-Port (1,4)} 				\\ \hline	
-		rd\_clk											& input							& FIFO Read CLK					\\ \hline
-		rd\_en  										& input							& FIFO Read enable			\\ \hline	
-		dout[C\_FIFO\_WIDTH:0]			& output						& FIFO Read data				\\ \hline
-		\multicolumn{3} { c|} {Flags (4)}								\\ \hline			
-		empty												& output						& FIFO Emtpy						\\ \hline
-		full												& output						& FIFO Full							\\ \hline
-		overflow										& output						& FIFO Overflow 				\\ \hline
-		underflow										& output						& FIFO Underflow				\\ \hline
-		prog\_full\_thresh[C\_FIFO\_WIDTH:0]	& output	& FIFO Programmable Full Threshold \\ \hline
-		prog\_empty\_thresh[C\_FIFO\_WIDTH:0]	& output	& FIFO Programmable Empty	Threshold\\ \hline
-		prog\_full									& output						& FIFO Programmable Full  \\ \hline
-		prog\_empty									& output						& FIFO Programmable Empty	\\ \hline
-		\end{tabular}
-	\caption{TX-FIFO}
-	\label{tab:tx-fifo}
-\end{table}
- 
-\newpage   
-\section{OPB\_IF}
-\begin{table}[!h]
-	\centering
-		\begin{tabular} {|l|c|l|} \hline \rowcolor{yellow1}
-		\textbf{Signal}							& \textbf{Direction}& \textbf{Description}	\\ \hline
-		\multicolumn{3} { c|} {Generics} \\ \hline		
- 		C\_BASEADDR		 						& -							 		  & Base address for OPB SPI		\\ \hline
-    C\_HIGHADDR									& - 								& High address for OPB SPI	  \\ \hline
-		C\_OPB\_AWIDTH 							& - 								& OPB address bus width			  \\ \hline
- 		C\_OPB\_DWIDTH 							& - 								& OPB data bus width					\\ \hline
- 		C\_FAMILY			 							& - 								& Target FPGA Family	  			\\ \hline
-		C\_SR\_WIDTH	 							& -									& Shift register width  			\\ \hline	 		  
-		C\_FIFO\_WIDTH 							& -									& Shift register width  			\\ \hline	
-		C\_FIFO\_SIZE								& -									& FIFO Size Width							\\ \hline
-		C\_NUM\_FLG									& - 								& Number of FIFO Status flags	\\ \hline
-		C\_NUM\_INT									& - 								& Number of IRQ Sources				\\ \hline
-		\multicolumn{3} { c|} {OPB-Bus} \\ \hline	
-		OPB\_rst			 							& input							& Async-Reset									\\ \hline	
-    OPB\_ABus[C\_OPB\_AWIDTH-1:0]	& input      			& Adress-Bus									\\ \hline	
-    OPB\_BE[C\_OPB\_DWIDTH/8-1:0]	& input				    & Bytes Enables								\\ \hline 
-    OPB\_Clk 										& input							& Clock												\\ \hline							     
-    OPB\_DBus[C\_OPB\_DWIDTH-1:0]	& input						& Data-Bus to slave						\\ \hline
-    OPB\_RNW      							& input							& Read/Write									\\ \hline
-    OPB\_Rst      							& input							& Reset												\\ \hline
-    OPB\_select  								& input							& Select 											\\ \hline											
-    OPB\_seqAddr 								& input							& Sequential Adress Enable		\\ \hline 
-    Sln\_DBus     							& output						& Data-Bus to Master					\\ \hline
-    Sln\_errAck   							& output						& Error Acknowledge   				\\ \hline		
-    Sln\_retry    							& output						& Retry 											\\ \hline		
-    Sln\_toutSup  							& output						& Timeout Suppression					\\ \hline		
-    Sln\_xferAck 								& output						& transfer Acknowledge				\\ \hline	
-		\multicolumn{3} { c|} {FIFO-PORT (2)} 								\\ \hline
-    opb\_tx\_en    							& output						& FIFO-TX Write Enable				\\ \hline
-    opb\_tx\_data[C\_SR\_WIDTH:0] 	& output				& FIFO-TX Write Data					\\ \hline
-		tx\_thresh[(2*C\_FIFO\_SIZE)-1:0]	& output			& FIFO-TX Prog Thresholds			\\ \hline   
-		\multicolumn{3} { c|} {FIFO-PORT (4)} 								\\ \hline
-    opb\_rx\_en    							& output						& FIFO-RX Read Enable					\\ \hline
-    opb\_rx\_data[C\_SR\_WIDTH:0] 	& input 				& FIFO-RX Read Data						\\ \hline
-  	rx\_thresh[(2*C\_FIFO\_SIZE)-1:0]	& output			& FIFO-RX Prog Thresholds			\\ \hline 
-		\multicolumn{3} { c|} {FIFO-Flags(2,4)}								\\ \hline  
-    opb\_fifo\_flg[C\_NUM\_FLG-1:0]	& input					& FIFO Flags									\\ \hline  		    	
-		\multicolumn{3} { c|} {IRQ-Signals}										\\ \hline  	
-    opb\_dgie     							& output						& Device Global IRQ Enable		\\ \hline  
-    opb\_ier(C\_NUM\_INT-1:0)   & output						& IRQ Enable Register					\\ \hline   
-    opb\_isr(C\_NUM\_INT-1:0)   & input							& IRQ Status Register					\\ \hline     
-    opb\_isr\_clr(C\_NUM\_INT-1:0) 	& output				& Clear IRQ Flags							\\ \hline     
-		\end{tabular}
-	\caption{OPB\_IF}
-	\label{tab:opb_if}
-\end{table}
