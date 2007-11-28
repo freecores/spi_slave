@@ -225,8 +225,8 @@ This Register is only available if C\_DMA\_EN is set. With this Register the Bas
 	\centering
 		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
-	  31:16						& TX\_DMA\_LEN  & R/W						 & 0										& TX DMA Number of Block Transfers		\\ \hline
- 		15:0						& 	\multicolumn{4} {c|} {reserved} \\ \hline				
+	  31:8						& TX\_DMA\_LEN  & R/W						 & 0										& TX DMA Number of Block Transfers		\\ \hline
+ 		7:0						  & 	\multicolumn{4} {c|} {reserved} \\ \hline				
 	\end{tabularx}
 	\caption{TX\_DMA\_NUM Register}
 	\label{tab:tx_dma_len}
@@ -269,8 +269,8 @@ This Register is only available if C\_DMA\_EN is set. See Register TX\_DMA\_ADDR
 	\centering
 		\begin{tabularx} {160mm}{|p{1cm}|p{5cm}|p{1.5cm}|p{1cm}|X|} \hline
 		\textbf{Bit}		& \textbf{Name}	& \textbf{Acess} & \textbf{Reset Value}	& \textbf{Description} 				\\ \hline
-	  31:16						& RX\_DMA\_LEN  & R/W						 & 0										& RX DMA Number of Block Transfers		\\ \hline
- 		15:0						& 	\multicolumn{4} {c|} {reserved} \\ \hline				
+	  31:8						& RX\_DMA\_LEN  & R/W						 & 0										& RX DMA Number of Block Transfers		\\ \hline
+ 		7:0							& \multicolumn{4} {c|} {reserved} \\ \hline				
 	\end{tabularx}
 	\caption{RX\_DMA\_NUM Register}
 	\label{tab:RX_dma_len}
