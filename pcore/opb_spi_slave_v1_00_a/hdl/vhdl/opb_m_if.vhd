@@ -16,6 +16,9 @@ use IEEE.STD_LOGIC_ARITH.all;
 use IEEE.STD_LOGIC_UNSIGNED.all;
 use IEEE.numeric_std.all;               -- conv_integer()
 
+library work;
+use work.opb_spi_slave_pack.all;
+
 entity opb_m_if is
   generic (
     C_BASEADDR        : std_logic_vector(0 to 31) := X"00000000";
@@ -58,7 +61,7 @@ entity opb_m_if is
     opb_tx_dma_ctl  : in  std_logic_vector(0 downto 0);
     -- base adress for transfer
     opb_tx_dma_addr : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-    opb_tx_dma_num  : in  std_logic_vector(15 downto 0);
+    opb_tx_dma_num  : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
     opb_tx_dma_done : out std_logic;
     ---------------------------------------------------------------------------
     -- write transfer
@@ -70,7 +73,7 @@ entity opb_m_if is
     opb_rx_dma_ctl  : in  std_logic_vector(0 downto 0);
     -- base adress for transfer
     opb_rx_dma_addr : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-    opb_rx_dma_num  : in  std_logic_vector(15 downto 0);
+    opb_rx_dma_num  : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
     opb_rx_dma_done : out std_logic);
 end opb_m_if;
 
@@ -95,13 +98,13 @@ architecture behavior of opb_m_if is
   -- read transfer
   signal opb_tx_dma_addr_int : std_logic_vector(C_OPB_DWIDTH-1 downto 0);
   signal opb_tx_dma_en       : std_logic;
-  signal opb_tx_dma_num_int  : std_logic_vector(15 downto 0);
+  signal opb_tx_dma_num_int  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
   signal opb_tx_dma_done_int : std_logic;
   
   -- write transfer
   signal opb_rx_dma_en       : std_logic;
   signal opb_rx_dma_addr_int : std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-  signal opb_rx_dma_num_int  : std_logic_vector(15 downto 0);
+  signal opb_rx_dma_num_int  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
   signal opb_rx_dma_done_int : std_logic;  
 
 

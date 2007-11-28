@@ -129,10 +129,10 @@ architecture behavior of opb_spi_slave is
       opb_isr_clr     : out std_logic_vector(C_NUM_INT-1 downto 0);
       opb_tx_dma_addr : out std_logic_vector(C_OPB_DWIDTH-1 downto 0);
       opb_tx_dma_ctl  : out std_logic_vector(0 downto 0);
-      opb_tx_dma_num  : out std_logic_vector(15 downto 0);
+      opb_tx_dma_num  : out std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
       opb_rx_dma_addr : out std_logic_vector(C_OPB_DWIDTH-1 downto 0);
       opb_rx_dma_ctl  : out std_logic_vector(0 downto 0);
-      opb_rx_dma_num  : out std_logic_vector(15 downto 0));
+      opb_rx_dma_num  : out std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0));
   end component;
 
 
@@ -171,14 +171,14 @@ architecture behavior of opb_spi_slave is
       opb_m_tx_data   : out std_logic_vector(C_SR_WIDTH-1 downto 0);
       opb_tx_dma_ctl  : in  std_logic_vector(0 downto 0);
       opb_tx_dma_addr : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-      opb_tx_dma_num  : in  std_logic_vector(15 downto 0);
+      opb_tx_dma_num  : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
       opb_tx_dma_done : out std_logic;
       opb_m_rx_req    : in  std_logic;
       opb_m_rx_en     : out std_logic;
       opb_m_rx_data   : in  std_logic_vector(C_SR_WIDTH-1 downto 0);
       opb_rx_dma_ctl  : in  std_logic_vector(0 downto 0);
       opb_rx_dma_addr : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-      opb_rx_dma_num  : in  std_logic_vector(15 downto 0);
+      opb_rx_dma_num  : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
       opb_rx_dma_done : out std_logic);
   end component;
 
@@ -253,10 +253,10 @@ architecture behavior of opb_spi_slave is
 
   signal opb_tx_dma_addr : std_logic_vector(C_OPB_DWIDTH-1 downto 0);
   signal opb_tx_dma_ctl  : std_logic_vector(0 downto 0);
-  signal opb_tx_dma_num  : std_logic_vector(15 downto 0);
+  signal opb_tx_dma_num  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
   signal opb_rx_dma_addr : std_logic_vector(C_OPB_DWIDTH-1 downto 0);
   signal opb_rx_dma_ctl  : std_logic_vector(0 downto 0);
-  signal opb_rx_dma_num  : std_logic_vector(15 downto 0);
+  signal opb_rx_dma_num  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
 
   -- opb_m_if
   signal opb_m_tx_en   : std_logic;

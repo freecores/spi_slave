@@ -65,10 +65,10 @@ entity opb_if is
     -- dma register
     opb_tx_dma_addr : out std_logic_vector(C_OPB_DWIDTH-1 downto 0);
     opb_tx_dma_ctl  : out std_logic_vector(0 downto 0);
-    opb_tx_dma_num  : out std_logic_vector(15 downto 0);
+    opb_tx_dma_num  : out std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
     opb_rx_dma_addr : out std_logic_vector(C_OPB_DWIDTH-1 downto 0);
     opb_rx_dma_ctl  : out std_logic_vector(0 downto 0);
-    opb_rx_dma_num  : out std_logic_vector(15 downto 0));
+    opb_rx_dma_num  : out std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0));
 end opb_if;
 
 architecture behavior of opb_if is
@@ -96,10 +96,10 @@ architecture behavior of opb_if is
   -- only used if C_DMA_EN=true
   signal opb_tx_dma_addr_int : std_logic_vector(C_OPB_DWIDTH-1 downto 0);
   signal opb_tx_dma_ctl_int  : std_logic_vector(0 downto 0);
-  signal opb_tx_dma_num_int  : std_logic_vector(15 downto 0);
+  signal opb_tx_dma_num_int  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
   signal opb_rx_dma_addr_int : std_logic_vector(C_OPB_DWIDTH-1 downto 0);
   signal opb_rx_dma_ctl_int  : std_logic_vector(0 downto 0);
-  signal opb_rx_dma_num_int  : std_logic_vector(15 downto 0);
+  signal opb_rx_dma_num_int  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
   
 begin  -- behavior
 
@@ -230,7 +230,7 @@ begin  -- behavior
 
                 when C_ADR_TX_DMA_NUM =>
                   if C_DMA_EN then
-                    Sln_DBus_big_end(15 downto 0) <= opb_tx_dma_num_int;
+                    Sln_DBus_big_end(C_WIDTH_DMA_NUM-1 downto 0) <= opb_tx_dma_num_int;
                   end if;
                   
 
@@ -246,7 +246,7 @@ begin  -- behavior
 
                 when C_ADR_RX_DMA_NUM =>
                   if C_DMA_EN then
-                    Sln_DBus_big_end(15 downto 0) <= opb_rx_dma_num_int;
+                    Sln_DBus_big_end(C_WIDTH_DMA_NUM-1 downto 0) <= opb_rx_dma_num_int;
                   end if;
 
                   
@@ -293,7 +293,7 @@ begin  -- behavior
 
                 when C_ADR_TX_DMA_NUM =>
                   if C_DMA_EN then
-                    opb_tx_dma_num_int <= OPB_DBus_big_end(15 downto 0);
+                    opb_tx_dma_num_int <= OPB_DBus_big_end(C_WIDTH_DMA_NUM-1 downto 0);
                   end if;
 
                 when C_ADR_RX_DMA_CTL =>
@@ -308,7 +308,7 @@ begin  -- behavior
 
                 when C_ADR_RX_DMA_NUM =>
                   if C_DMA_EN then
-                    opb_rx_dma_num_int <= OPB_DBus_big_end(15 downto 0);
+                    opb_rx_dma_num_int <= OPB_DBus_big_end(C_WIDTH_DMA_NUM-1 downto 0);
                   end if;
                   
                 when others =>

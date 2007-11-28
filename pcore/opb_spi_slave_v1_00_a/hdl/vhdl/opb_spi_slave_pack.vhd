@@ -26,6 +26,7 @@ package opb_spi_slave_pack is
 
   constant C_NUM_FLG           : integer := 15;
   constant C_NUM_INT           : integer := 10;
+  constant C_WIDTH_DMA_NUM : integer := 24;
 
 
 -- CTL_Register
