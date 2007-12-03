@@ -24,8 +24,8 @@ package opb_spi_slave_pack is
   constant C_ADR_ISR  : std_logic_vector(7 downto 2) := conv_std_logic_vector(16#11#, 6);
   constant C_ADR_IER  : std_logic_vector(7 downto 2) := conv_std_logic_vector(16#12#, 6);
 
-  constant C_NUM_FLG           : integer := 15;
-  constant C_NUM_INT           : integer := 10;
+  constant C_NUM_FLG           : integer := 16;
+  constant C_NUM_INT           : integer := 11;
   constant C_WIDTH_DMA_NUM : integer := 24;
 
 
