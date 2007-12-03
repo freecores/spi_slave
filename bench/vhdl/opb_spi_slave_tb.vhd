@@ -6,7 +6,7 @@
 -- Author     : 
 -- Company    : 
 -- Created    : 2007-09-02
--- Last update: 2007-11-18
+-- Last update: 2007-12-03
 -- Platform   : 
 -- Standard   : VHDL'87
 -------------------------------------------------------------------------------
@@ -29,7 +29,16 @@ use work.opb_spi_slave_pack.all;
 -------------------------------------------------------------------------------
 
 entity opb_spi_slave_tb is
-
+  generic (
+    -- 0: simple transfer 1 byte transmit/receive
+    -- 1: transfer 4 bytes and check flags
+    -- 2: write until TX-FIFO asserts full, read until RX-FIFO asserts full, read
+    --    and compare data
+    -- 3: check FIFO Reset form underflow condition
+    -- 4: check FIFO Flags IRQ Generation
+    -- 5: check Slave select IRQ Generation
+    -- 6: test opb Master Transfer
+    test : std_logic_vector(7 downto 0) := "11111111");
 end opb_spi_slave_tb;
 
 -------------------------------------------------------------------------------
@@ -49,8 +58,8 @@ architecture behavior of opb_spi_slave_tb is
   constant C_CPOL            : integer range 0 to 1      := 0;
   constant C_PHA             : integer range 0 to 1      := 0;
   constant C_FIFO_SIZE_WIDTH : integer range 4 to 7      := 7;
-  constant C_DMA_EN : boolean := true;
-  
+  constant C_DMA_EN          : boolean                   := true;
+
   component opb_spi_slave
     generic (
       C_BASEADDR        : std_logic_vector(0 to 31);
@@ -143,6 +152,8 @@ architecture behavior of opb_spi_slave_tb is
 
   signal opb_read_data : std_logic_vector(31 downto 0);
   signal spi_value_in  : std_logic_vector(C_SR_WIDTH-1 downto 0);
+
+  signal OPB_Transfer_Abort : boolean;
   
 begin  -- behavior
 
@@ -218,6 +229,7 @@ begin  -- behavior
     if (OPB_Rst = '1') then
       MOPB_MGrant  <= '0';
       MOPB_xferAck <= '0';
+        MOPB_errAck   <= '0';
     elsif rising_edge(OPB_Clk) then
       -- arbiter
       if (M_request = '1') then
@@ -228,8 +240,15 @@ begin  -- behavior
 
       -- xfer_Ack
       if (M_select = '1') then
-        MOPB_xferAck <= not MOPB_xferAck;
+        if (OPB_Transfer_Abort) then
+        MOPB_errAck   <= '1';
+        else
+        MOPB_xferAck <= not MOPB_xferAck;          
+        end if;
+
+
       else
+        MOPB_errAck   <= '0';
         MOPB_xferAck <= '0';
       end if;
       
@@ -322,9 +341,10 @@ begin  -- behavior
     OPB_seqAddr <= '0';
 
     -- int opb_master
-    MOPB_errAck  <= '0';
     MOPB_retry   <= '0';
     MOPB_timeout <= '0';
+
+    OPB_Transfer_Abort <= false;
 
     -- reset active
     OPB_Rst <= '1';
@@ -350,381 +370,404 @@ begin  -- behavior
 
     ---------------------------------------------------------------------------
     -- simple transfer 1 byte transmit/receive
+    if (test(0) = '1') then
+      -- write transmit data
+      opb_write(C_ADR_TX_DATA, 16#78#);
 
-    -- write transmit data
-    opb_write(C_ADR_TX_DATA, 16#78#);
+      -- enable GDE and TX_EN and RX_EN
+      opb_write(C_ADR_CTL, 16#7#);
 
-    -- enable GDE and TX_EN and RX_EN
-    opb_write(C_ADR_CTL, 16#7#);
+      -- send/receive 8bit
+      spi_transfer(conv_std_logic_vector(16#B5#, C_SR_WIDTH));
 
-    -- send/receive 8bit
-    spi_transfer(conv_std_logic_vector(16#B5#, C_SR_WIDTH));
+      -- compare transmit data
+      assert (spi_value_in = conv_std_logic_vector(16#78#, C_SR_WIDTH)) report "Master Receive Failure" severity failure;
 
-    -- compare transmit data
-    assert (spi_value_in = conv_std_logic_vector(16#78#, C_SR_WIDTH)) report "Master Receive Failure" severity failure;
-
-    -- read RX-Data Value
-    opb_read(C_ADR_RX_DATA);
-
-    -- compare receive data
-    assert (opb_read_data = conv_std_logic_vector(16#B5#,C_SR_WIDTH)) report "Master Transfer Failure" severity failure;
-
-    ---------------------------------------------------------------------------
-    -- transfer 4 bytes and check flags
-    opb_read(C_ADR_STATUS);
-    -- only empty Bit and prog_empty set
-
-    temp                           := (others => '0');
-    temp(SPI_SR_Bit_TX_Prog_empty) := '1';
-    temp(SPI_SR_Bit_TX_Empty)      := '1';
-    temp(SPI_SR_Bit_RX_Prog_empty) := '1';
-    temp(SPI_SR_Bit_RX_Empty)      := '1';
-    temp(SPI_SR_Bit_SS_n)          := '1';
-
-    assert (opb_read_data = temp) report "Check Status Bits: TX: 0, RX: 0" severity failure;
-
-    -- write transmit data
-    opb_write(C_ADR_TX_DATA, 16#01#);
-
-
-    opb_read(C_ADR_STATUS);
-    temp                           := (others => '0');
-    temp(SPI_SR_Bit_TX_Prog_empty) := '1';
-    temp(SPI_SR_Bit_RX_Prog_empty) := '1';
-    temp(SPI_SR_Bit_RX_Empty)      := '1';
-    temp(SPI_SR_Bit_SS_n)          := '1';
-
-    assert (opb_read_data = temp) report "Check Status Bits: TX: 1, RX:0" severity failure;
-
-    ---------------------------------------------------------------------------
-    for i in 2 to 255 loop
-      opb_write(C_ADR_TX_DATA, i);
-      opb_read(C_ADR_STATUS);
-      -- check TX prog_empty deassert
-      if ((opb_read_data(SPI_SR_Bit_TX_Prog_empty) = '0') and first(0) = '0') then
-        assert (false) report "TX prog_emtpy deassert after " & integer'image(i) & " writes." severity warning;
-        first(0) := '1';
-      end if;
-
-      -- check TX prog_full assert
-      if ((opb_read_data(SPI_SR_Bit_TX_Prog_Full) = '1') and first(1) = '0') then
-        assert (false) report "TX prog_full assert after " & integer'image(i) & " writes." severity warning;
-        first(1) := '1';
-      end if;
-
-      -- check TX full assert
-      if ((opb_read_data(SPI_SR_Bit_TX_Full) = '1') and first(2) = '0') then
-        assert (false) report "TX full assert after " & integer'image(i) & " writes." severity warning;
-        first(2) := '1';
-        exit;
-      end if;
-      
-    end loop;  -- i
-
-    ---------------------------------------------------------------------------
-    first := (others => '0');
-
-    -- 16 spi transfer
-    for i in 1 to 255 loop
-      spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
-      opb_read(C_ADR_STATUS);
-
-      -------------------------------------------------------------------------
-      -- check TX FIFO flags
-      -- check TX full deassert
-      if ((opb_read_data(SPI_SR_Bit_TX_Full) = '0') and first(0) = '0') then
-        assert (false) report "TX full deassert after " & integer'image(i) & " transfers." severity warning;
-        first(0) := '1';
-      end if;
-
-      -- check TX prog_full deassert
-      if ((opb_read_data(SPI_SR_Bit_TX_Prog_Full) = '0') and first(1) = '0') then
-        assert (false) report "TX prog_full deassert after " & integer'image(i) & " transfers." severity warning;
-        first(1) := '1';
-      end if;
-
-      -- check TX prog_emtpy assert
-      if ((opb_read_data(SPI_SR_Bit_TX_Prog_empty) = '1') and first(2) = '0') then
-        assert (false) report "TX prog_empty assert after " & integer'image(i) & " transfers." severity warning;
-        first(2) := '1';
-      end if;
-
-      -- check TX emtpy assert
-      if ((opb_read_data(SPI_SR_Bit_TX_Empty) = '1') and first(3) = '0') then
-        assert (false) report "TX empty assert after " & integer'image(i) & " transfers." severity warning;
-        first(3) := '1';
-      end if;
-
-      -------------------------------------------------------------------------
-      -- check RX FIFO flags
-      -- check RX empty deassert
-      if ((opb_read_data(SPI_SR_Bit_RX_Empty) = '0') and first(4) = '0') then
-        assert (false) report "RX empty deassert after " & integer'image(i) & " transfers." severity warning;
-        first(4) := '1';
-      end if;
-
-      -- check RX prog_empty deassert
-      if ((opb_read_data(SPI_SR_Bit_RX_Prog_empty) = '0') and first(5) = '0') then
-        assert (false) report "RX prog_empty deassert after " & integer'image(i) & " transfers." severity warning;
-        first(5) := '1';
-      end if;
-
-      -- check RX prog_full deassert
-      if ((opb_read_data(SPI_SR_Bit_RX_Prog_Full) = '1') and first(6) = '0') then
-        assert (false) report "RX prog_full assert after " & integer'image(i) & " transfers." severity warning;
-        first(6) := '1';
-      end if;
-
-      -- check RX full deassert
-      if ((opb_read_data(SPI_SR_Bit_RX_Full) = '1') and first(7) = '0') then
-        assert (false) report "RX full assert after " & integer'image(i) & " transfers." severity warning;
-        first(7) := '1';
-        exit;
-      end if;
-    end loop;  -- i    
-
-    ---------------------------------------------------------------------------
-    -- read data from fifo
-    first := (others => '0');
-
-    for i in 1 to 255 loop
+      -- read RX-Data Value
       opb_read(C_ADR_RX_DATA);
 
-      -- check data
-      assert (i = conv_integer(opb_read_data)) report "Read data failure at " & integer'image(i) severity failure;
-
-      opb_read(C_ADR_STATUS);
-      -- check RX FIFO flags
-
-      -- check RX full deassert
-      if ((opb_read_data(SPI_SR_Bit_RX_Full) = '0') and first(0) = '0') then
-        assert (false) report "RX full deassert after " & integer'image(i) & " transfers." severity warning;
-        first(0) := '1';
-      end if;
-
-      -- check RX prog_full deassert
-      if ((opb_read_data(SPI_SR_Bit_RX_Prog_Full) = '0') and first(1) = '0') then
-        assert (false) report "RX prog_full deassert after " & integer'image(i) & " transfers." severity warning;
-        first(1) := '1';
-      end if;
-
-      -- check RX prog_empty assert
-      if ((opb_read_data(SPI_SR_Bit_RX_Prog_empty) = '1') and first(2) = '0') then
-        assert (false) report "RX prog_empty assert after " & integer'image(i) & " transfers." severity warning;
-        first(2) := '1';
-      end if;
-
-
-      -- check RX empty assert
-      if ((opb_read_data(SPI_SR_Bit_RX_Empty) = '1') and first(3) = '0') then
-        assert (false) report "RX empty assert after " & integer'image(i) & " transfers." severity warning;
-        first(3) := '1';
-        exit;
-      end if;
-    end loop;  -- i        
-
+      -- compare receive data
+      assert (opb_read_data = conv_std_logic_vector(16#B5#, C_SR_WIDTH)) report "Master Transfer Failure" severity failure;
+      
+    end if;
     ---------------------------------------------------------------------------
-
-    -- add transfer to go in underflow condition
-    spi_transfer(conv_std_logic_vector(0, C_SR_WIDTH));
-
-    -- reset core (Bit 4)
-    opb_write(C_ADR_CTL, 16#F#);
-
-    --Check flags
-    temp                           := (others => '0');
-    temp(SPI_SR_Bit_TX_Prog_empty) := '1';
-    temp(SPI_SR_Bit_TX_Empty)      := '1';
-    temp(SPI_SR_Bit_RX_Prog_empty) := '1';
-    temp(SPI_SR_Bit_RX_Empty)      := '1';
-    temp(SPI_SR_Bit_SS_n)          := '1';
-
-    assert (opb_read_data = temp) report "Status Bits after Reset failure" severity failure;
-
-    -- enable all IRQ except Chip select
-    opb_write(C_ADR_IER, 16#3F#);
-    -- global irq enable
-    opb_write(C_ADR_DGIE, 16#1#);
-
-    -- fill transmit buffer
-    for i in 1 to 255 loop
-      opb_write(C_ADR_TX_DATA, i);
+    -- transfer 4 bytes and check flags
+    if (test(1) = '1') then
       opb_read(C_ADR_STATUS);
-      -- check TX full assert
-      if ((opb_read_data(SPI_SR_Bit_TX_Full) = '1')) then
-        assert (false) report "TX full assert after " & integer'image(i) & " writes." severity warning;
-        exit;
-      end if;
-    end loop;  -- i
+      -- only empty Bit and prog_empty set
 
-    -- SPI-Data Transfers an Check TX Prog_Empty and TX Empty IRQ Generation
-    for i in 1 to 255 loop
+      temp                           := (others => '0');
+      temp(SPI_SR_Bit_TX_Prog_empty) := '1';
+      temp(SPI_SR_Bit_TX_Empty)      := '1';
+      temp(SPI_SR_Bit_RX_Prog_empty) := '1';
+      temp(SPI_SR_Bit_RX_Empty)      := '1';
+      temp(SPI_SR_Bit_SS_n)          := '1';
+
+      assert (opb_read_data = temp) report "Check Status Bits: TX: 0, RX: 0" severity failure;
+
+      -- write transmit data
+      opb_write(C_ADR_TX_DATA, 16#01#);
+
+
+      opb_read(C_ADR_STATUS);
+      temp                           := (others => '0');
+      temp(SPI_SR_Bit_TX_Prog_empty) := '1';
+      temp(SPI_SR_Bit_RX_Prog_empty) := '1';
+      temp(SPI_SR_Bit_RX_Empty)      := '1';
+      temp(SPI_SR_Bit_SS_n)          := '1';
+
+      assert (opb_read_data = temp) report "Check Status Bits: TX: 1, RX:0" severity failure;
+    end if;
+---------------------------------------------------------------------------
+-- write until TX-FIFO asserts full, read until RX-FIFO asserts full, read an
+-- compare data
+    if (test(2) = '1') then
+      for i in 2 to 255 loop
+        opb_write(C_ADR_TX_DATA, i);
+        opb_read(C_ADR_STATUS);
+        -- check TX prog_empty deassert
+        if ((opb_read_data(SPI_SR_Bit_TX_Prog_empty) = '0') and first(0) = '0') then
+          assert (false) report "TX prog_emtpy deassert after " & integer'image(i) & " writes." severity warning;
+          first(0) := '1';
+        end if;
+
+        -- check TX prog_full assert
+        if ((opb_read_data(SPI_SR_Bit_TX_Prog_Full) = '1') and first(1) = '0') then
+          assert (false) report "TX prog_full assert after " & integer'image(i) & " writes." severity warning;
+          first(1) := '1';
+        end if;
+
+        -- check TX full assert
+        if ((opb_read_data(SPI_SR_Bit_TX_Full) = '1') and first(2) = '0') then
+          assert (false) report "TX full assert after " & integer'image(i) & " writes." severity warning;
+          first(2) := '1';
+          exit;
+        end if;
+        
+      end loop;  -- i
+
+      ---------------------------------------------------------------------------
+      first := (others => '0');
+
+      -- 16 spi transfer
+      for i in 1 to 255 loop
+        spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
+        opb_read(C_ADR_STATUS);
+
+        -------------------------------------------------------------------------
+        -- check TX FIFO flags
+        -- check TX full deassert
+        if ((opb_read_data(SPI_SR_Bit_TX_Full) = '0') and first(0) = '0') then
+          assert (false) report "TX full deassert after " & integer'image(i) & " transfers." severity warning;
+          first(0) := '1';
+        end if;
+
+        -- check TX prog_full deassert
+        if ((opb_read_data(SPI_SR_Bit_TX_Prog_Full) = '0') and first(1) = '0') then
+          assert (false) report "TX prog_full deassert after " & integer'image(i) & " transfers." severity warning;
+          first(1) := '1';
+        end if;
+
+        -- check TX prog_emtpy assert
+        if ((opb_read_data(SPI_SR_Bit_TX_Prog_empty) = '1') and first(2) = '0') then
+          assert (false) report "TX prog_empty assert after " & integer'image(i) & " transfers." severity warning;
+          first(2) := '1';
+        end if;
+
+        -- check TX emtpy assert
+        if ((opb_read_data(SPI_SR_Bit_TX_Empty) = '1') and first(3) = '0') then
+          assert (false) report "TX empty assert after " & integer'image(i) & " transfers." severity warning;
+          first(3) := '1';
+        end if;
+
+        -------------------------------------------------------------------------
+        -- check RX FIFO flags
+        -- check RX empty deassert
+        if ((opb_read_data(SPI_SR_Bit_RX_Empty) = '0') and first(4) = '0') then
+          assert (false) report "RX empty deassert after " & integer'image(i) & " transfers." severity warning;
+          first(4) := '1';
+        end if;
+
+        -- check RX prog_empty deassert
+        if ((opb_read_data(SPI_SR_Bit_RX_Prog_empty) = '0') and first(5) = '0') then
+          assert (false) report "RX prog_empty deassert after " & integer'image(i) & " transfers." severity warning;
+          first(5) := '1';
+        end if;
+
+        -- check RX prog_full deassert
+        if ((opb_read_data(SPI_SR_Bit_RX_Prog_Full) = '1') and first(6) = '0') then
+          assert (false) report "RX prog_full assert after " & integer'image(i) & " transfers." severity warning;
+          first(6) := '1';
+        end if;
+
+        -- check RX full deassert
+        if ((opb_read_data(SPI_SR_Bit_RX_Full) = '1') and first(7) = '0') then
+          assert (false) report "RX full assert after " & integer'image(i) & " transfers." severity warning;
+          first(7) := '1';
+          exit;
+        end if;
+      end loop;  -- i    
+
+
+      ---------------------------------------------------------------------------
+      -- read data from fifo
+      first := (others => '0');
+
+      for i in 1 to 255 loop
+        opb_read(C_ADR_RX_DATA);
+
+        -- check data
+        assert (i = conv_integer(opb_read_data)) report "Read data failure at " & integer'image(i) severity failure;
+
+        opb_read(C_ADR_STATUS);
+        -- check RX FIFO flags
+
+        -- check RX full deassert
+        if ((opb_read_data(SPI_SR_Bit_RX_Full) = '0') and first(0) = '0') then
+          assert (false) report "RX full deassert after " & integer'image(i) & " transfers." severity warning;
+          first(0) := '1';
+        end if;
+
+        -- check RX prog_full deassert
+        if ((opb_read_data(SPI_SR_Bit_RX_Prog_Full) = '0') and first(1) = '0') then
+          assert (false) report "RX prog_full deassert after " & integer'image(i) & " transfers." severity warning;
+          first(1) := '1';
+        end if;
+
+        -- check RX prog_empty assert
+        if ((opb_read_data(SPI_SR_Bit_RX_Prog_empty) = '1') and first(2) = '0') then
+          assert (false) report "RX prog_empty assert after " & integer'image(i) & " transfers." severity warning;
+          first(2) := '1';
+        end if;
+
+
+        -- check RX empty assert
+        if ((opb_read_data(SPI_SR_Bit_RX_Empty) = '1') and first(3) = '0') then
+          assert (false) report "RX empty assert after " & integer'image(i) & " transfers." severity warning;
+          first(3) := '1';
+          exit;
+        end if;
+      end loop;  -- i        
+    end if;
+
+---------------------------------------------------------------------------
+-- check FIFO Reset form underflow condition
+    if (test(3) = '1') then
+      -- add transfer to go in underflow condition
       spi_transfer(conv_std_logic_vector(0, C_SR_WIDTH));
+
+      -- reset core (Bit 4)
+      opb_write(C_ADR_CTL, 16#F#);
+
+      --Check flags
+      temp                           := (others => '0');
+      temp(SPI_SR_Bit_TX_Prog_empty) := '1';
+      temp(SPI_SR_Bit_TX_Empty)      := '1';
+      temp(SPI_SR_Bit_RX_Prog_empty) := '1';
+      temp(SPI_SR_Bit_RX_Empty)      := '1';
+      temp(SPI_SR_Bit_SS_n)          := '1';
+
+      assert (opb_read_data = temp) report "Status Bits after Reset failure" severity failure;
+    end if;
+-------------------------------------------------------------------------------    
+-- check FIFO Flags IRQ Generation
+    if (test(4) = '1') then
+      -- enable all IRQ except Chip select
+      opb_write(C_ADR_IER, 16#3F#);
+      -- global irq enable
+      opb_write(C_ADR_DGIE, 16#1#);
+
+      -- fill transmit buffer
+      for i in 1 to 255 loop
+        opb_write(C_ADR_TX_DATA, i);
+        opb_read(C_ADR_STATUS);
+        -- check TX full assert
+        if ((opb_read_data(SPI_SR_Bit_TX_Full) = '1')) then
+          assert (false) report "TX full assert after " & integer'image(i) & " writes." severity warning;
+          exit;
+        end if;
+      end loop;  -- i
+
+      -- SPI-Data Transfers an Check TX Prog_Empty and TX Empty IRQ Generation
+      for i in 1 to 255 loop
+        spi_transfer(conv_std_logic_vector(0, C_SR_WIDTH));
+        wait until rising_edge(OPB_Clk);
+        wait until rising_edge(OPB_Clk);
+        wait until rising_edge(OPB_Clk);
+        if (opb_irq = '1') then
+          opb_read(C_ADR_ISR);
+          -- TX Prog Empty
+          if ((opb_read_data(SPI_ISR_Bit_TX_Prog_Empty) = '1')) then
+            report "TX prog empty irq after " & integer'image(i) & " transfers.";
+            -- clear_irq
+            opb_write(C_ADR_ISR, 16#1#);
+            wait until rising_edge(OPB_Clk);
+            assert (opb_irq = '0') report "TX Prog Empty not cleared" severity warning;
+          end if;
+
+          -- TX EMPTY
+          if ((opb_read_data(SPI_ISR_Bit_TX_Empty) = '1')) then
+            report "TX empty irq after " & integer'image(i) & " transfers.";
+            -- clear_irq
+            opb_write(C_ADR_ISR, 16#2#);
+            wait until rising_edge(OPB_Clk);
+            assert (opb_irq = '0') report "IRQ TX Empty not cleared" severity warning;
+          end if;
+
+          -- TX Underflow
+          if ((opb_read_data(SPI_ISR_Bit_TX_Underflow) = '1')) then
+            report "TX underflow irq after " & integer'image(i) & " transfers.";
+            -- clear_irq
+            opb_write(C_ADR_ISR, 16#4#);
+            wait until rising_edge(OPB_Clk);
+            assert (opb_irq = '0') report "IRQ TX underflow not cleared" severity warning;
+          end if;
+
+          -- RX Prog Full
+          if ((opb_read_data(SPI_ISR_Bit_RX_Prog_Full) = '1')) then
+            report "RX prog full irq after " & integer'image(i) & " transfers.";
+            -- clear_irq
+            opb_write(C_ADR_ISR, 16#8#);
+            wait until rising_edge(OPB_Clk);
+            assert (opb_irq = '0') report "RX Prog Full not cleared" severity warning;
+          end if;
+
+          -- RX Full
+          if ((opb_read_data(SPI_ISR_Bit_RX_Full) = '1')) then
+            report "RX full irq after " & integer'image(i) & " transfers.";
+            -- clear_irq
+            opb_write(C_ADR_ISR, 16#10#);
+            wait until rising_edge(OPB_Clk);
+            assert (opb_irq = '0') report "RX Full not cleared" severity warning;
+          end if;
+
+          -- RX Overflow
+          if ((opb_read_data(SPI_ISR_Bit_RX_Overflow) = '1')) then
+            report "RX overflow irq after " & integer'image(i) & " transfers.";
+            -- clear_irq
+            opb_write(C_ADR_ISR, 2**SPI_ISR_Bit_RX_Overflow);
+            wait until rising_edge(OPB_Clk);
+            assert (opb_irq = '0') report "RX Overflow not cleared" severity warning;
+            exit;
+          end if;
+          
+        end if;
+
+      end loop;  -- i    
+    end if;
+---------------------------------------------------------------------------
+    -- check slave select irq
+    if (test(5) = '1') then
+      -- reset core
+      opb_write(C_ADR_CTL, 16#F#);
+
+      -- eable Chip select fall/rise IRQ
+      opb_write(C_ADR_IER, 16#C0#);
+
+      ss_n <= '0';
       wait until rising_edge(OPB_Clk);
       wait until rising_edge(OPB_Clk);
       wait until rising_edge(OPB_Clk);
       if (opb_irq = '1') then
         opb_read(C_ADR_ISR);
-        -- TX Prog Empty
-        if ((opb_read_data(SPI_ISR_Bit_TX_Prog_Empty) = '1')) then
-          report "TX prog empty irq after " & integer'image(i) & " transfers.";
+        if ((opb_read_data(SPI_ISR_Bit_SS_Fall) = '1')) then
+          report "SS Fall irq found";
           -- clear_irq
-          opb_write(C_ADR_ISR, 16#1#);
+          opb_write(C_ADR_ISR, 2**SPI_ISR_Bit_SS_Fall);
           wait until rising_edge(OPB_Clk);
-          assert (opb_irq = '0') report "TX Prog Empty not cleared" severity warning;
+          assert (opb_irq = '0') report "SS_Fall IRQ  not cleared" severity warning;
         end if;
-
-        -- TX EMPTY
-        if ((opb_read_data(SPI_ISR_Bit_TX_Empty) = '1')) then
-          report "TX empty irq after " & integer'image(i) & " transfers.";
-          -- clear_irq
-          opb_write(C_ADR_ISR, 16#2#);
-          wait until rising_edge(OPB_Clk);
-          assert (opb_irq = '0') report "IRQ TX Empty not cleared" severity warning;
-        end if;
-
-        -- TX Underflow
-        if ((opb_read_data(SPI_ISR_Bit_TX_Underflow) = '1')) then
-          report "TX underflow irq after " & integer'image(i) & " transfers.";
-          -- clear_irq
-          opb_write(C_ADR_ISR, 16#4#);
-          wait until rising_edge(OPB_Clk);
-          assert (opb_irq = '0') report "IRQ TX underflow not cleared" severity warning;
-        end if;
-
-        -- RX Prog Full
-        if ((opb_read_data(SPI_ISR_Bit_RX_Prog_Full) = '1')) then
-          report "RX prog full irq after " & integer'image(i) & " transfers.";
-          -- clear_irq
-          opb_write(C_ADR_ISR, 16#8#);
-          wait until rising_edge(OPB_Clk);
-          assert (opb_irq = '0') report "RX Prog Full not cleared" severity warning;
-        end if;
-
-        -- RX Full
-        if ((opb_read_data(SPI_ISR_Bit_RX_Full) = '1')) then
-          report "RX full irq after " & integer'image(i) & " transfers.";
-          -- clear_irq
-          opb_write(C_ADR_ISR, 16#10#);
-          wait until rising_edge(OPB_Clk);
-          assert (opb_irq = '0') report "RX Full not cleared" severity warning;
-        end if;
-
-        -- RX Overflow
-        if ((opb_read_data(SPI_ISR_Bit_RX_Overflow) = '1')) then
-          report "RX overflow irq after " & integer'image(i) & " transfers.";
-          -- clear_irq
-          opb_write(C_ADR_ISR, 2**SPI_ISR_Bit_RX_Overflow);
-          wait until rising_edge(OPB_Clk);
-          assert (opb_irq = '0') report "RX Overflow not cleared" severity warning;
-          exit;
-        end if;
-        
       end if;
 
-    end loop;  -- i    
-
-    ---------------------------------------------------------------------------
-    -- check Chip select irq
-    -- reset core
-    opb_write(C_ADR_CTL, 16#F#);
-
-    -- eable Chip select fall/rise IRQ
-    opb_write(C_ADR_IER, 16#C0#);
-
-    ss_n <= '0';
-    wait until rising_edge(OPB_Clk);
-    wait until rising_edge(OPB_Clk);
-    wait until rising_edge(OPB_Clk);
-    if (opb_irq = '1') then
-      opb_read(C_ADR_ISR);
-      if ((opb_read_data(SPI_ISR_Bit_SS_Fall) = '1')) then
-        report "SS Fall irq found";
-        -- clear_irq
-        opb_write(C_ADR_ISR, 2**SPI_ISR_Bit_SS_Fall);
-        wait until rising_edge(OPB_Clk);
-        assert (opb_irq = '0') report "SS_Fall IRQ  not cleared" severity warning;
-      end if;
-    end if;
-
-    ss_n <= '1';
-    wait until rising_edge(OPB_Clk);
-    wait until rising_edge(OPB_Clk);
-    wait until rising_edge(OPB_Clk);
-    if (opb_irq = '1') then
-      opb_read(C_ADR_ISR);
-      if ((opb_read_data(SPI_ISR_Bit_SS_Rise) = '1')) then
-        report "SS Rise irq found";
-        -- clear_irq
-        opb_write(C_ADR_ISR, 2**SPI_ISR_Bit_SS_Rise);
-        wait until rising_edge(OPB_Clk);
-        assert (opb_irq = '0') report "SS_Rise IRQ  not cleared" severity warning;
+      ss_n <= '1';
+      wait until rising_edge(OPB_Clk);
+      wait until rising_edge(OPB_Clk);
+      wait until rising_edge(OPB_Clk);
+      if (opb_irq = '1') then
+        opb_read(C_ADR_ISR);
+        if ((opb_read_data(SPI_ISR_Bit_SS_Rise) = '1')) then
+          report "SS Rise irq found";
+          -- clear_irq
+          opb_write(C_ADR_ISR, 2**SPI_ISR_Bit_SS_Rise);
+          wait until rising_edge(OPB_Clk);
+          assert (opb_irq = '0') report "SS_Rise IRQ  not cleared" severity warning;
+        end if;
       end if;
     end if;
 -------------------------------------------------------------------------------
     -- test opb Master Transfer
-    -- write TX Threshold
-    -- Bit [15:00] Prog Full Threshold
-    -- Bit [31:16] Prog Empty Threshold   
-    opb_write(C_ADR_TX_THRESH, 16#0005000B#);
+    if (test(6) = '1') then
+      -- write TX Threshold
+      -- Bit [15:00] Prog Full Threshold
+      -- Bit [31:16] Prog Empty Threshold   
+      opb_write(C_ADR_TX_THRESH, 16#0005000B#);
 
-    -- write RX Threshold
-    -- Bit [15:00] Prog Full Threshold
-    -- Bit [31:16] Prog Empty Threshold   
+      -- write RX Threshold
+      -- Bit [15:00] Prog Full Threshold
+      -- Bit [31:16] Prog Empty Threshold   
 
-    -- Pog full must greater or equal than 16(Block Transfer Size)! 
-    opb_write(C_ADR_RX_THRESH, 16#0006000F#);
+      -- Pog full must greater or equal than 16(Block Transfer Size)! 
+      opb_write(C_ADR_RX_THRESH, 16#0006000F#);
 
-    -- set transmit buffer Base Adress
-    opb_write(C_ADR_TX_DMA_ADDR, 16#24000000#);
-    -- enable dma read transfer
-    opb_write(C_ADR_TX_DMA_CTL, 16#1#);
+      -- set transmit buffer Base Adress
+      opb_write(C_ADR_TX_DMA_ADDR, 16#24000000#);
+      -- enable dma read transfer
+      opb_write(C_ADR_TX_DMA_CTL, 16#1#);
 
-    -- emulate DDR-Memory Controller
-    wait until M_select = '1';
-    for i in 0 to 15 loop
+      -- emulate DDR-Memory Controller
+      wait until M_select = '1';
+      for i in 0 to 15 loop
 
-      -- clear other bits not used
-      if (C_SR_WIDTH /= 32) then
-              OPB_DBus(0 to C_OPB_DWIDTH-C_SR_WIDTH-1)            <= (others => '0');
-      end if;
+        -- clear other bits not used
+        if (C_SR_WIDTH /= 32) then
+          OPB_DBus(0 to C_OPB_DWIDTH-C_SR_WIDTH-1) <= (others => '0');
+        end if;
 
-      OPB_DBus(C_OPB_DWIDTH-C_SR_WIDTH to C_OPB_DWIDTH-1) <= conv_std_logic_vector(i, C_SR_WIDTH);
-      wait until rising_edge(MOPB_xferAck);
-      assert (conv_integer(M_ABus) = 16#24000000#+i*4) report "DMA transfer 1 read adr failure" severity failure;
-      wait until falling_edge(MOPB_xferAck);
-    end loop;  -- i
-    OPB_DBus <= (others => '0');
+        OPB_DBus(C_OPB_DWIDTH-C_SR_WIDTH to C_OPB_DWIDTH-1) <= conv_std_logic_vector(i, C_SR_WIDTH);
+        wait until rising_edge(MOPB_xferAck);
+        assert (conv_integer(M_ABus) = 16#24000000#+i*4) report "DMA transfer 1 read adr failure" severity failure;
+        wait until falling_edge(MOPB_xferAck);
+      end loop;  -- i
+      OPB_DBus <= (others => '0');
 
-    -- transfer 16 bytes
-    for i in 0 to 15 loop
-      spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
-      assert (conv_integer(spi_value_in) = i) report "DMA Transfer 1 read data failure" severity failure;
-    end loop;  -- i
+      -- transfer 16 bytes
+      for i in 0 to 15 loop
+        spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
+        assert (conv_integer(spi_value_in) = i) report "DMA Transfer 1 read data failure" severity failure;
+      end loop;  -- i
 
-    -- set RX-Buffer base adress
-    opb_write(C_ADR_RX_DMA_ADDR, 16#25000000#);
-    -- enable dma write transfer
-    opb_write(C_ADR_RX_DMA_CTL, 16#1#);
+      -- set RX-Buffer base adress
+      opb_write(C_ADR_RX_DMA_ADDR, 16#25000000#);
+      -- enable dma write transfer
+      opb_write(C_ADR_RX_DMA_CTL, 16#1#);
 
-    -- emulate DDR-Memory Controller
-    wait until M_select = '1';
-    for i in 0 to 15 loop
-      wait until falling_edge(MOPB_xferAck);
-      assert (conv_integer(M_ABus) = 16#25000000#+i*4) report "DMA transfer 1 write adr failure" severity failure;
-      assert (conv_integer(M_DBus) = i) report "DMA transfer 1 write data failure" severity failure;
-    end loop;  -- i
-
-
-    -- transfer second 16 bytes
-    for i in 16 to 31 loop
-      spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
-      -- disabled because simultaneous controller emulation and SPI Transfer impossible
-      -- assert (conv_integer(spi_value_in) = i) report "DMA Transfer 2 read data failure" severity failure;
-    end loop;  -- i
+      -- emulate DDR-Memory Controller
+      wait until M_select = '1';
+      for i in 0 to 15 loop
+        if (i = 15) then
+          OPB_Transfer_Abort <= true;
+          wait until falling_edge(MOPB_errAck);
+          OPB_Transfer_Abort <= false;
+          exit;
+        end if;
+        wait until falling_edge(MOPB_xferAck);
+        assert (conv_integer(M_ABus) = 16#25000000#+i*4) report "DMA transfer 1 write adr failure" severity failure;
+        assert (conv_integer(M_DBus) = i) report "DMA transfer 1 write data failure" severity failure;
+      end loop;  -- i
 
 
-    wait for 1 us;
+
+      -- transfer second 16 bytes
+      for i in 16 to 31 loop
+        spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
+        -- disabled because simultaneous controller emulation and SPI Transfer impossible
+        -- assert (conv_integer(spi_value_in) = i) report "DMA Transfer 2 read data failure" severity failure;
+      end loop;  -- i
+
+
+      wait for 1 us;
+    end if;
+---------------------------------------------------------------------------
 
 
 
@@ -739,7 +782,7 @@ end behavior;
 
 configuration opb_spi_slave_tb_behavior_cfg of opb_spi_slave_tb is
   for behavior
-end for;
+  end for;
 end opb_spi_slave_tb_behavior_cfg;
 
 -------------------------------------------------------------------------------

@@ -44,8 +44,10 @@ add wave -noupdate -format Logic /opb_spi_slave_tb/dut/rx_fifo_1/underflow
 add wave -noupdate -format Logic /opb_spi_slave_tb/dut/rx_fifo_1/prog_full
 add wave -noupdate -format Logic /opb_spi_slave_tb/dut/rx_fifo_1/full
 add wave -noupdate -format Logic /opb_spi_slave_tb/dut/rx_fifo_1/overflow
+add wave -noupdate -divider Internal
+add wave -noupdate -format Logic /opb_spi_slave_tb/dut/opb_abort_flg
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {7450000 ps} 0}
+WaveRestoreCursors {{Cursor 1} {525982512 ps} 0}
 configure wave -namecolwidth 302
 configure wave -valuecolwidth 53
 configure wave -justifyvalue left
@@ -59,4 +61,4 @@ configure wave -gridperiod 1
 configure wave -griddelta 40
 configure wave -timeline 0
 update
-WaveRestoreZoom {2506325 ps} {13562825 ps}
+WaveRestoreZoom {0 ps} {568438500 ps}
