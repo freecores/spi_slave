@@ -74,7 +74,9 @@ entity opb_m_if is
     -- base adress for transfer
     opb_rx_dma_addr : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
     opb_rx_dma_num  : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
-    opb_rx_dma_done : out std_logic);
+    opb_rx_dma_done : out std_logic;
+    ---------------------------------------------------------------------------
+    opb_abort_flg   : out std_logic);
 end opb_m_if;
 
 architecture behavior of opb_m_if is
@@ -100,12 +102,12 @@ architecture behavior of opb_m_if is
   signal opb_tx_dma_en       : std_logic;
   signal opb_tx_dma_num_int  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
   signal opb_tx_dma_done_int : std_logic;
-  
+
   -- write transfer
   signal opb_rx_dma_en       : std_logic;
   signal opb_rx_dma_addr_int : std_logic_vector(C_OPB_DWIDTH-1 downto 0);
   signal opb_rx_dma_num_int  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
-  signal opb_rx_dma_done_int : std_logic;  
+  signal opb_rx_dma_done_int : std_logic;
 
 
 
@@ -151,7 +153,7 @@ begin  -- behavior
                                            (others => '0');
   M_DBus_big_end(C_OPB_DWIDTH-1 downto C_SR_WIDTH) <= (others => '0');
 
-  opb_tx_dma_done <= opb_tx_dma_done_int;  
+  opb_tx_dma_done <= opb_tx_dma_done_int;
 
   -- read transfer
   opb_m_tx_en <= MOPB_xferAck when (M_select_int = '1' and (read_transfer = true)) else
@@ -163,34 +165,36 @@ begin  -- behavior
 
 
 -------------------------------------------------------------------------------
-  opb_masteer_proc: process(OPB_Rst, OPB_Clk)
+  opb_masteer_proc : process(OPB_Rst, OPB_Clk)
   begin
     if (OPB_Rst = '1') then
-      M_BE            <= (others => '0');
-      M_busLock       <= '0';
-      M_request       <= '0';
-      M_RNW           <= '0';
-      M_select_int    <= '0';
-      M_seqAddr       <= '0';
+      M_BE                <= (others => '0');
+      M_busLock           <= '0';
+      M_request           <= '0';
+      M_RNW               <= '0';
+      M_select_int        <= '0';
+      M_seqAddr           <= '0';
       opb_tx_dma_done_int <= '0';
       opb_rx_dma_done_int <= '0';
+      opb_abort_flg       <= '0';
     elsif rising_edge(OPB_Clk) then
       case state is
         when idle =>
+          opb_abort_flg <= '0';
           opb_tx_dma_en <= opb_tx_dma_ctl(0);
           opb_rx_dma_en <= opb_rx_dma_ctl(0);
 
           if (opb_tx_dma_ctl(0) = '1' and opb_tx_dma_en = '0') then
             opb_tx_dma_addr_int <= opb_tx_dma_addr;
             opb_tx_dma_num_int  <= opb_tx_dma_num;
-            opb_tx_dma_done_int     <= '0';
+            opb_tx_dma_done_int <= '0';
 
           end if;
 
           if (opb_rx_dma_ctl(0) = '1' and opb_rx_dma_en = '0') then
             opb_rx_dma_addr_int <= opb_rx_dma_addr;
             opb_rx_dma_num_int  <= opb_rx_dma_num;
-            opb_rx_dma_done_int    <= '0';
+            opb_rx_dma_done_int <= '0';
           end if;
 
           if (opb_tx_dma_en = '1' and opb_m_tx_req = '1' and opb_tx_dma_done_int = '0') then
@@ -249,12 +253,13 @@ begin  -- behavior
             end if;
           elsif (MOPB_retry = '1' or MOPB_errAck = '1' or MOPB_timeout = '1') then
             -- cancel transfer
-            M_busLock    <= '0';
-            M_seqAddr    <= '0';
-            M_RNW        <= '0';
-            M_select_int <= '0';
-            M_BE         <= (others => '0');
-            state        <= done;
+            M_busLock     <= '0';
+            M_seqAddr     <= '0';
+            M_RNW         <= '0';
+            M_select_int  <= '0';
+            M_BE          <= (others => '0');
+            opb_abort_flg <= '1';
+            state         <= done;
           else
             state <= transfer_read;
           end if;
@@ -281,12 +286,13 @@ begin  -- behavior
             end if;
           elsif (MOPB_retry = '1' or MOPB_errAck = '1' or MOPB_timeout = '1') then
             -- cancel transfer
-            M_busLock    <= '0';
-            M_seqAddr    <= '0';
-            M_RNW        <= '0';
-            M_select_int <= '0';
-            M_BE         <= (others => '0');
-            state        <= done;
+            M_busLock     <= '0';
+            M_seqAddr     <= '0';
+            M_RNW         <= '0';
+            M_select_int  <= '0';
+            M_BE          <= (others => '0');
+            opb_abort_flg <= '1';
+            state         <= done;
           else
             state <= transfer_write;
           end if;
