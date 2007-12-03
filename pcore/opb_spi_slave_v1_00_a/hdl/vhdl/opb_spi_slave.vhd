@@ -179,7 +179,8 @@ architecture behavior of opb_spi_slave is
       opb_rx_dma_ctl  : in  std_logic_vector(0 downto 0);
       opb_rx_dma_addr : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
       opb_rx_dma_num  : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
-      opb_rx_dma_done : out std_logic);
+      opb_rx_dma_done : out std_logic;
+      opb_abort_flg   : out std_logic);
   end component;
 
   component shift_register
@@ -263,6 +264,7 @@ architecture behavior of opb_spi_slave is
   signal opb_m_tx_data : std_logic_vector(C_SR_WIDTH-1 downto 0);
   signal opb_m_rx_en   : std_logic;
   signal opb_m_rx_data : std_logic_vector(C_SR_WIDTH-1 downto 0);
+  signal opb_abort_flg : std_logic;
 
 -- shift_register
   signal sr_tx_clk  : std_logic;
@@ -410,7 +412,8 @@ begin  -- behavior
         opb_rx_dma_ctl  => opb_rx_dma_ctl,
         opb_rx_dma_addr => opb_rx_dma_addr,
         opb_rx_dma_num  => opb_rx_dma_num,
-        opb_rx_dma_done => opb_fifo_flg(14));
+        opb_rx_dma_done => opb_fifo_flg(14),
+        opb_abort_flg   => opb_abort_flg);
   end generate dma_enable;
 
   dma_disable : if (C_DMA_EN = false) generate
@@ -519,7 +522,7 @@ begin  -- behavior
   rst <= OPB_Rst or opb_ctl_reg(C_OPB_CTL_REG_RST);
 
   opb_fifo_flg(12) <= ss_n;
-
+  opb_fifo_flg(15)  <= opb_fifo_flg;
 
 
 
@@ -543,6 +546,8 @@ begin  -- behavior
   opb_irq_flg(8) <= opb_fifo_flg(13);
   -- Bit 9: RX DMA Done
   opb_irq_flg(9) <= opb_fifo_flg(14);
+  -- Bit 10: DMA Transfer Abort
+  opb_irq_flg(10) <= opb_abort_flg;
 
   --* IRQ Enable, Detection and Flags Control
   irq_gen : for i in 0 to C_NUM_INT-1 generate
