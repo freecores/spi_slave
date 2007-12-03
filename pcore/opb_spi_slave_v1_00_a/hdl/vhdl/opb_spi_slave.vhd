@@ -522,7 +522,7 @@ begin  -- behavior
   rst <= OPB_Rst or opb_ctl_reg(C_OPB_CTL_REG_RST);
 
   opb_fifo_flg(12) <= ss_n;
-  opb_fifo_flg(15)  <= opb_fifo_flg;
+  opb_fifo_flg(15)  <= opb_abort_flg;
 
 
 
