@@ -17,6 +17,7 @@
 --/
 -- Version 1.0 Initial Release
 -- Version 1.1 rx_cnt/tx_cnt only increment if < C_SR_WIDTH
+-- Version 1.2 removed delays for simulation
 -------------------------------------------------------------------------------
 
 library ieee;
@@ -84,17 +85,17 @@ begin  -- behavior
               not sclk;
 
 
-  sr_rx_en <= transport sr_rx_en_int after 1 ns;
-  sr_tx_en <= transport sr_tx_en_int after 1 ns;
+  sr_rx_en <= sr_rx_en_int;
+  sr_tx_en <= sr_tx_en_int;
 
   --* reorder received bits if not "MSB_First"
   reorder_rx_bits : process(sr_rx_data_int)
   begin
     for i in 0 to C_SR_WIDTH-1 loop
       if C_MSB_FIRST then
-        sr_rx_data(i) <= transport sr_rx_data_int(i) after 1 ns;
+        sr_rx_data(i) <= sr_rx_data_int(i);
       else
-        sr_rx_data(C_SR_WIDTH-1-i) <= transport sr_rx_data_int(i)after 1 ns;
+        sr_rx_data(C_SR_WIDTH-1-i) <= sr_rx_data_int(i);
       end if;
     end loop;  -- i
   end process reorder_rx_bits;
