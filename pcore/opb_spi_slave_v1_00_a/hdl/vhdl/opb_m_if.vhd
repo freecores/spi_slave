@@ -35,48 +35,49 @@ entity opb_m_if is
 
   port (
     -- opb master interface
-    OPB_Clk         : in  std_logic;
-    OPB_Rst         : in  std_logic;
-    OPB_DBus        : in  std_logic_vector(0 to C_OPB_DWIDTH-1);
-    M_request       : out std_logic;
-    MOPB_MGrant     : in  std_logic;
-    M_busLock       : out std_logic;
-    M_ABus          : out std_logic_vector(0 to C_OPB_AWIDTH-1);
-    M_BE            : out std_logic_vector(0 to C_OPB_DWIDTH/8-1);
-    M_DBus          : out std_logic_vector(0 to C_OPB_DWIDTH-1);
-    M_RNW           : out std_logic;
-    M_select        : out std_logic;
-    M_seqAddr       : out std_logic;
-    MOPB_errAck     : in  std_logic;
-    MOPB_retry      : in  std_logic;
-    MOPB_timeout    : in  std_logic;
-    MOPB_xferAck    : in  std_logic;
+    OPB_Clk           : in  std_logic;
+    OPB_Rst           : in  std_logic;
+    OPB_DBus          : in  std_logic_vector(0 to C_OPB_DWIDTH-1);
+    M_request         : out std_logic;
+    MOPB_MGrant       : in  std_logic;
+    M_busLock         : out std_logic;
+    M_ABus            : out std_logic_vector(0 to C_OPB_AWIDTH-1);
+    M_BE              : out std_logic_vector(0 to C_OPB_DWIDTH/8-1);
+    M_DBus            : out std_logic_vector(0 to C_OPB_DWIDTH-1);
+    M_RNW             : out std_logic;
+    M_select          : out std_logic;
+    M_seqAddr         : out std_logic;
+    MOPB_errAck       : in  std_logic;
+    MOPB_retry        : in  std_logic;
+    MOPB_timeout      : in  std_logic;
+    MOPB_xferAck      : in  std_logic;
     ---------------------------------------------------------------------------
     -- read transfer
     -- read data from memory and fill fifo
-    opb_m_tx_req    : in  std_logic;
-    opb_m_tx_en     : out std_logic;
-    opb_m_tx_data   : out std_logic_vector(C_SR_WIDTH-1 downto 0);
+    opb_m_tx_req      : in  std_logic;
+    opb_m_tx_en       : out std_logic;
+    opb_m_tx_data     : out std_logic_vector(C_SR_WIDTH-1 downto 0);
     -- enable/disable dma transfer
-    opb_tx_dma_ctl  : in  std_logic_vector(0 downto 0);
+    opb_tx_dma_ctl    : in  std_logic_vector(0 downto 0);
     -- base adress for transfer
-    opb_tx_dma_addr : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-    opb_tx_dma_num  : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
-    opb_tx_dma_done : out std_logic;
+    opb_tx_dma_addr   : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
+    opb_tx_dma_num    : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
+    opb_tx_dma_done   : out std_logic;
     ---------------------------------------------------------------------------
     -- write transfer
     -- read fifo an write to memory 
-    opb_m_rx_req    : in  std_logic;
-    opb_m_rx_en     : out std_logic;
-    opb_m_rx_data   : in  std_logic_vector(C_SR_WIDTH-1 downto 0);
+    opb_m_rx_req      : in  std_logic;
+    opb_m_rx_en       : out std_logic;
+    opb_m_rx_data     : in  std_logic_vector(C_SR_WIDTH-1 downto 0);
     -- enable/disable dma transfer
-    opb_rx_dma_ctl  : in  std_logic_vector(0 downto 0);
+    opb_rx_dma_ctl    : in  std_logic_vector(0 downto 0);
     -- base adress for transfer
-    opb_rx_dma_addr : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-    opb_rx_dma_num  : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
-    opb_rx_dma_done : out std_logic;
+    opb_rx_dma_addr   : in  std_logic_vector(C_OPB_DWIDTH-1 downto 0);
+    opb_rx_dma_num    : in  std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
+    opb_rx_dma_done   : out std_logic;
     ---------------------------------------------------------------------------
-    opb_abort_flg   : out std_logic);
+    opb_abort_flg     : out std_logic;
+    opb_m_last_block : out std_logic);
 end opb_m_if;
 
 architecture behavior of opb_m_if is
@@ -108,7 +109,6 @@ architecture behavior of opb_m_if is
   signal opb_rx_dma_addr_int : std_logic_vector(C_OPB_DWIDTH-1 downto 0);
   signal opb_rx_dma_num_int  : std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
   signal opb_rx_dma_done_int : std_logic;
-
 
 
 begin  -- behavior
@@ -177,6 +177,9 @@ begin  -- behavior
       opb_tx_dma_done_int <= '0';
       opb_rx_dma_done_int <= '0';
       opb_abort_flg       <= '0';
+      opb_m_last_block   <= '0';
+      opb_tx_dma_num_int <= (others => '0');
+      opb_rx_dma_num_int <= (others => '0');      
     elsif rising_edge(OPB_Clk) then
       case state is
         when idle =>
@@ -221,10 +224,16 @@ begin  -- behavior
             if (read_transfer) then
               -- read
               M_RNW <= '1';
+              if (conv_integer(opb_tx_dma_num_int) = 0) then
+                opb_m_last_block <= '1';
+              end if;
               state <= transfer_read;
             else
               -- write
               M_RNW <= '0';
+              if (conv_integer(opb_rx_dma_num_int) = 0) then
+                opb_m_last_block <= '1';
+              end if;
               state <= transfer_write;
             end if;
           else
@@ -246,6 +255,7 @@ begin  -- behavior
               M_BE         <= (others => '0');
               if (conv_integer(opb_tx_dma_num_int) = 0) then
                 opb_tx_dma_done_int <= '1';
+                opb_m_last_block   <= '0';
               else
                 opb_tx_dma_num_int <= opb_tx_dma_num_int-1;
               end if;
@@ -279,6 +289,7 @@ begin  -- behavior
               M_BE         <= (others => '0');
               if (conv_integer(opb_rx_dma_num_int) = 0) then
                 opb_rx_dma_done_int <= '1';
+                opb_m_last_block   <= '0';
               else
                 opb_rx_dma_num_int <= opb_rx_dma_num_int-1;
               end if;
