@@ -6,7 +6,7 @@
 -- Author     : 
 -- Company    : 
 -- Created    : 2007-09-02
--- Last update: 2007-12-03
+-- Last update: 2008-03-23
 -- Platform   : 
 -- Standard   : VHDL'87
 -------------------------------------------------------------------------------
@@ -38,7 +38,7 @@ entity opb_spi_slave_tb is
     -- 4: check FIFO Flags IRQ Generation
     -- 5: check Slave select IRQ Generation
     -- 6: test opb Master Transfer
-    test : std_logic_vector(7 downto 0) := "11111111");
+    test : std_logic_vector(7 downto 0) := "01000000");
 end opb_spi_slave_tb;
 
 -------------------------------------------------------------------------------
@@ -59,6 +59,7 @@ architecture behavior of opb_spi_slave_tb is
   constant C_PHA             : integer range 0 to 1      := 0;
   constant C_FIFO_SIZE_WIDTH : integer range 4 to 7      := 7;
   constant C_DMA_EN          : boolean                   := true;
+  constant C_CRC_EN          : boolean                   := true;
 
   component opb_spi_slave
     generic (
@@ -73,7 +74,8 @@ architecture behavior of opb_spi_slave_tb is
       C_CPOL            : integer range 0 to 1;
       C_PHA             : integer range 0 to 1;
       C_FIFO_SIZE_WIDTH : integer range 4 to 7;
-      C_DMA_EN          : boolean);
+      C_DMA_EN          : boolean;
+      C_CRC_EN          : boolean);
     port (
       OPB_ABus     : in  std_logic_vector(0 to C_OPB_AWIDTH-1);
       OPB_BE       : in  std_logic_vector(0 to C_OPB_DWIDTH/8-1);
@@ -154,6 +156,8 @@ architecture behavior of opb_spi_slave_tb is
   signal spi_value_in  : std_logic_vector(C_SR_WIDTH-1 downto 0);
 
   signal OPB_Transfer_Abort : boolean;
+  signal OPB_DBus0          : std_logic_vector(0 to C_OPB_DWIDTH-1);
+  signal OPB_DBus1          : std_logic_vector(0 to C_OPB_DWIDTH-1);
   
 begin  -- behavior
 
@@ -171,7 +175,8 @@ begin  -- behavior
       C_CPOL            => C_CPOL,
       C_PHA             => C_PHA,
       C_FIFO_SIZE_WIDTH => C_FIFO_SIZE_WIDTH,
-      C_DMA_EN          => C_DMA_EN)
+      C_DMA_EN          => C_DMA_EN,
+      C_CRC_EN          => C_CRC_EN)
     port map (
       OPB_ABus     => OPB_ABus,
       OPB_BE       => OPB_BE,
@@ -229,7 +234,7 @@ begin  -- behavior
     if (OPB_Rst = '1') then
       MOPB_MGrant  <= '0';
       MOPB_xferAck <= '0';
-        MOPB_errAck   <= '0';
+      MOPB_errAck  <= '0';
     elsif rising_edge(OPB_Clk) then
       -- arbiter
       if (M_request = '1') then
@@ -241,21 +246,33 @@ begin  -- behavior
       -- xfer_Ack
       if (M_select = '1') then
         if (OPB_Transfer_Abort) then
-        MOPB_errAck   <= '1';
+          MOPB_errAck <= '1';
         else
-        MOPB_xferAck <= not MOPB_xferAck;          
+          if (conv_integer(M_ABus)>=16#24000000#) then
+          if (M_RNW = '1') then
+            -- read
+            OPB_DBus0(C_OPB_DWIDTH-C_SR_WIDTH to C_OPB_DWIDTH-1) <= "0000000000000000" & "00" & M_ABus(16 to C_OPB_DWIDTH-3);
+          end if;
+          MOPB_xferAck <= not MOPB_xferAck;
+        end if;
+
         end if;
 
 
       else
-        MOPB_errAck   <= '0';
+        OPB_DBus0    <= (others => '0');
+        MOPB_errAck  <= '0';
         MOPB_xferAck <= '0';
       end if;
       
     end if;
   end process;
+  -------------------------------------------------------------------------------
+  u1 : for i in 0 to 31 generate
+    OPB_DBus(i) <= OPB_DBus0(i) or OPB_DBus1(i);
+  end generate u1;
 
-
+  ------------------------------------------------------------------------------
   -- waveform generation
   WaveGen_Proc : process
     variable temp  : std_logic_vector(31 downto 0);
@@ -271,7 +288,7 @@ begin  -- behavior
       OPB_ABus   <= transport conv_std_logic_vector(conv_integer(adr & "00"), 32) after 2 ns;
       OPB_select <= transport '1' after 2 ns;
       OPB_RNW    <= transport '0' after 2 ns;
-      OPB_DBus   <= transport conv_std_logic_vector(data, 32)                     after 2 ns;
+      OPB_DBus1  <= transport conv_std_logic_vector(data, 32)                     after 2 ns;
 
       for i in 0 to 3 loop
         wait until rising_edge(OPB_Clk);
@@ -279,7 +296,7 @@ begin  -- behavior
           exit;
         end if;
       end loop;  -- i
-      OPB_DBus   <= transport X"00000000" after 2 ns;
+      OPB_DBus1  <= transport X"00000000" after 2 ns;
       OPB_ABus   <= transport X"00000000" after 2 ns;
       OPB_select <= '0';
     end procedure opb_write;
@@ -291,7 +308,7 @@ begin  -- behavior
       OPB_ABus   <= transport conv_std_logic_vector(conv_integer(adr & "00"), 32) after 2 ns;
       OPB_select <= transport '1' after 2 ns;
       OPB_RNW    <= transport '1' after 2 ns;
-      OPB_DBus   <= transport conv_std_logic_vector(0, 32)                        after 2 ns;
+      OPB_DBus1  <= transport conv_std_logic_vector(0, 32)                        after 2 ns;
 
       for i in 0 to 3 loop
         wait until rising_edge(OPB_Clk);
@@ -324,7 +341,6 @@ begin  -- behavior
       wait for clk_period/2;
     end procedure spi_transfer;
     -------------------------------------------------------------------------------
-
     
   begin
     sclk   <= '0';
@@ -335,7 +351,6 @@ begin  -- behavior
     -- init OPB-Slave
     OPB_ABus    <= (others => '0');
     OPB_BE      <= (others => '0');
-    OPB_DBus    <= (others => '0');
     OPB_RNW     <= '0';
     OPB_select  <= '0';
     OPB_seqAddr <= '0';
@@ -697,6 +712,9 @@ begin  -- behavior
 -------------------------------------------------------------------------------
     -- test opb Master Transfer
     if (test(6) = '1') then
+
+      -- enable SPI and CRC
+      opb_write(C_ADR_CTL, 2**C_OPB_CTL_REG_DGE+2**C_OPB_CTL_REG_TX_EN+2**C_OPB_CTL_REG_RX_EN+2**C_OPB_CTL_REG_CRC_EN);
       -- write TX Threshold
       -- Bit [15:00] Prog Full Threshold
       -- Bit [31:16] Prog Empty Threshold   
@@ -711,59 +729,58 @@ begin  -- behavior
 
       -- set transmit buffer Base Adress
       opb_write(C_ADR_TX_DMA_ADDR, 16#24000000#);
+      -- set block number
+      opb_write(C_ADR_TX_DMA_NUM, 1);
+
+      -- set RX-Buffer base adress
+      opb_write(C_ADR_RX_DMA_ADDR, 16#25000000#);
+      -- set block number
+      opb_write(C_ADR_RX_DMA_NUM, 1);
+
+      -- enable dma write transfer
+      opb_write(C_ADR_RX_DMA_CTL, 1);
+
       -- enable dma read transfer
-      opb_write(C_ADR_TX_DMA_CTL, 16#1#);
+      opb_write(C_ADR_TX_DMA_CTL, 1);
 
-      -- emulate DDR-Memory Controller
-      wait until M_select = '1';
+      -- time to fill fifo from ram
       for i in 0 to 15 loop
-
-        -- clear other bits not used
-        if (C_SR_WIDTH /= 32) then
-          OPB_DBus(0 to C_OPB_DWIDTH-C_SR_WIDTH-1) <= (others => '0');
-        end if;
-
-        OPB_DBus(C_OPB_DWIDTH-C_SR_WIDTH to C_OPB_DWIDTH-1) <= conv_std_logic_vector(i, C_SR_WIDTH);
-        wait until rising_edge(MOPB_xferAck);
-        assert (conv_integer(M_ABus) = 16#24000000#+i*4) report "DMA transfer 1 read adr failure" severity failure;
-        wait until falling_edge(MOPB_xferAck);
+        wait until rising_edge(OPB_Clk);
       end loop;  -- i
-      OPB_DBus <= (others => '0');
 
       -- transfer 16 bytes
+      -- data block
       for i in 0 to 15 loop
         spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
         assert (conv_integer(spi_value_in) = i) report "DMA Transfer 1 read data failure" severity failure;
       end loop;  -- i
 
-      -- set RX-Buffer base adress
-      opb_write(C_ADR_RX_DMA_ADDR, 16#25000000#);
-      -- enable dma write transfer
-      opb_write(C_ADR_RX_DMA_CTL, 16#1#);
-
-      -- emulate DDR-Memory Controller
-      wait until M_select = '1';
-      for i in 0 to 15 loop
-        if (i = 15) then
-          OPB_Transfer_Abort <= true;
-          wait until falling_edge(MOPB_errAck);
-          OPB_Transfer_Abort <= false;
-          exit;
-        end if;
-        wait until falling_edge(MOPB_xferAck);
-        assert (conv_integer(M_ABus) = 16#25000000#+i*4) report "DMA transfer 1 write adr failure" severity failure;
-        assert (conv_integer(M_DBus) = i) report "DMA transfer 1 write data failure" severity failure;
-      end loop;  -- i
-
-
-
-      -- transfer second 16 bytes
-      for i in 16 to 31 loop
+      -- crc_block
+      for i in 16 to 30 loop
         spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
-        -- disabled because simultaneous controller emulation and SPI Transfer impossible
-        -- assert (conv_integer(spi_value_in) = i) report "DMA Transfer 2 read data failure" severity failure;
+        assert (conv_integer(spi_value_in) = i) report "DMA Transfer 1 read data failure" severity failure;
       end loop;  -- i
 
+      -- check CRC
+      spi_transfer(conv_std_logic_vector(31, C_SR_WIDTH));
+      assert (conv_integer(spi_value_in) = 16#eb99fa90#) report "TX CRC_Failure"  severity failure;
+
+      -- wait until RX transfer done
+      for i in 0 to 15 loop
+      opb_read(C_ADR_STATUS);
+      if (opb_read_data(SPI_SR_Bit_RX_DMA_Done) ='1') then
+        exit;
+      end if;
+      wait for 1 us;
+      end loop;  -- i
+
+      -- check TX CRC Register
+      opb_read(C_ADR_TX_CRC);
+      assert (conv_integer(opb_read_data)=16#eb99fa90#) report "TX Register CRC Failure" severity failure;
+      
+      -- check RX CRC Register
+      opb_read(C_ADR_RX_CRC);
+      assert (conv_integer(opb_read_data)=16#eb99fa90#) report "RX Register CRC Failure" severity failure;      
 
       wait for 1 us;
     end if;
