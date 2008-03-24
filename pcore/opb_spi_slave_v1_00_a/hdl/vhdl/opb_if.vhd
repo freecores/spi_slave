@@ -30,45 +30,49 @@ entity opb_if is
     C_FAMILY          : string                    := "virtex-4";
     C_SR_WIDTH        : integer                   := 8;
     C_FIFO_SIZE_WIDTH : integer                   := 4;
-    C_DMA_EN          : boolean                   := true);
+    C_DMA_EN          : boolean                   := false;
+    C_CRC_EN          : boolean                   := false);
   port (
     -- OPB-Bus Signals
-    OPB_ABus        : in  std_logic_vector(0 to C_OPB_AWIDTH-1);
-    OPB_BE          : in  std_logic_vector(0 to C_OPB_DWIDTH/8-1);
-    OPB_Clk         : in  std_logic;
-    OPB_DBus        : in  std_logic_vector(0 to C_OPB_DWIDTH-1);
-    OPB_RNW         : in  std_logic;
-    OPB_Rst         : in  std_logic;
-    OPB_select      : in  std_logic;
-    OPB_seqAddr     : in  std_logic;
-    Sln_DBus        : out std_logic_vector(0 to C_OPB_DWIDTH-1);
-    Sln_errAck      : out std_logic;
-    Sln_retry       : out std_logic;
-    Sln_toutSup     : out std_logic;
-    Sln_xferAck     : out std_logic;
+    OPB_ABus         : in  std_logic_vector(0 to C_OPB_AWIDTH-1);
+    OPB_BE           : in  std_logic_vector(0 to C_OPB_DWIDTH/8-1);
+    OPB_Clk          : in  std_logic;
+    OPB_DBus         : in  std_logic_vector(0 to C_OPB_DWIDTH-1);
+    OPB_RNW          : in  std_logic;
+    OPB_Rst          : in  std_logic;
+    OPB_select       : in  std_logic;
+    OPB_seqAddr      : in  std_logic;
+    Sln_DBus         : out std_logic_vector(0 to C_OPB_DWIDTH-1);
+    Sln_errAck       : out std_logic;
+    Sln_retry        : out std_logic;
+    Sln_toutSup      : out std_logic;
+    Sln_xferAck      : out std_logic;
     -- fifo ports
-    opb_s_tx_en     : out std_logic;
-    opb_s_tx_data   : out std_logic_vector(C_SR_WIDTH-1 downto 0);
-    opb_s_rx_en     : out std_logic;
-    opb_s_rx_data   : in  std_logic_vector(C_SR_WIDTH-1 downto 0);
+    opb_s_tx_en      : out std_logic;
+    opb_s_tx_data    : out std_logic_vector(C_SR_WIDTH-1 downto 0);
+    opb_s_rx_en      : out std_logic;
+    opb_s_rx_data    : in  std_logic_vector(C_SR_WIDTH-1 downto 0);
     -- control register
-    opb_ctl_reg     : out std_logic_vector(C_OPB_CTL_REG_WIDTH-1 downto 0);
+    opb_ctl_reg      : out std_logic_vector(C_OPB_CTL_REG_WIDTH-1 downto 0);
     -- Fifo almost full/empty thresholds
-    tx_thresh       : out std_logic_vector((2*C_FIFO_SIZE_WIDTH)-1 downto 0);
-    rx_thresh       : out std_logic_vector((2*C_FIFO_SIZE_WIDTH)-1 downto 0);
-    opb_fifo_flg    : in  std_logic_vector(C_NUM_FLG-1 downto 0);
+    tx_thresh        : out std_logic_vector((2*C_FIFO_SIZE_WIDTH)-1 downto 0);
+    rx_thresh        : out std_logic_vector((2*C_FIFO_SIZE_WIDTH)-1 downto 0);
+    opb_fifo_flg     : in  std_logic_vector(C_NUM_FLG-1 downto 0);
     -- interrupts
-    opb_dgie        : out std_logic;
-    opb_ier         : out std_logic_vector(C_NUM_INT-1 downto 0);
-    opb_isr         : in  std_logic_vector(C_NUM_INT-1 downto 0);
-    opb_isr_clr     : out std_logic_vector(C_NUM_INT-1 downto 0);
+    opb_dgie         : out std_logic;
+    opb_ier          : out std_logic_vector(C_NUM_INT-1 downto 0);
+    opb_isr          : in  std_logic_vector(C_NUM_INT-1 downto 0);
+    opb_isr_clr      : out std_logic_vector(C_NUM_INT-1 downto 0);
     -- dma register
-    opb_tx_dma_addr : out std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-    opb_tx_dma_ctl  : out std_logic_vector(0 downto 0);
-    opb_tx_dma_num  : out std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
-    opb_rx_dma_addr : out std_logic_vector(C_OPB_DWIDTH-1 downto 0);
-    opb_rx_dma_ctl  : out std_logic_vector(0 downto 0);
-    opb_rx_dma_num  : out std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0));
+    opb_tx_dma_addr  : out std_logic_vector(C_OPB_DWIDTH-1 downto 0);
+    opb_tx_dma_ctl   : out std_logic_vector(0 downto 0);
+    opb_tx_dma_num   : out std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
+    opb_rx_dma_addr  : out std_logic_vector(C_OPB_DWIDTH-1 downto 0);
+    opb_rx_dma_ctl   : out std_logic_vector(0 downto 0);
+    opb_rx_dma_num   : out std_logic_vector(C_WIDTH_DMA_NUM-1 downto 0);
+    -- rx crc
+    opb_rx_crc_value : in  std_logic_vector(C_SR_WIDTH-1 downto 0);
+    opb_tx_crc_value : in  std_logic_vector(C_SR_WIDTH-1 downto 0));
 end opb_if;
 
 architecture behavior of opb_if is
@@ -127,7 +131,7 @@ begin  -- behavior
   Sln_toutSup <= '0';
 
   --* convert Sln_DBus_big_end  to little mode
-  conv_big_Sln_DBus_proc: process(Sln_DBus_big_end)
+  conv_big_Sln_DBus_proc : process(Sln_DBus_big_end)
   begin
     for i in 0 to 31 loop
       Sln_DBus(31-i) <= Sln_DBus_big_end(i);
@@ -135,7 +139,7 @@ begin  -- behavior
   end process conv_big_Sln_DBus_proc;
 
   --* convert OPB_ABus to big endian
-  conv_big_OPB_ABus_proc: process(OPB_ABus)
+  conv_big_OPB_ABus_proc : process(OPB_ABus)
   begin
     for i in 0 to 31 loop
       OPB_ABus_big_end(31-i) <= OPB_ABus(i);
@@ -143,7 +147,7 @@ begin  -- behavior
   end process conv_big_OPB_ABus_proc;
 
   --* convert OPB_DBus  to little mode
-  conv_big_OPB_DBus_proc: process(OPB_DBus)
+  conv_big_OPB_DBus_proc : process(OPB_DBus)
   begin
     for i in 0 to 31 loop
       OPB_DBus_big_end(31-i) <= OPB_DBus(i);
@@ -153,7 +157,7 @@ begin  -- behavior
   --* control OPB requests
   --*
   --* handles OPB-read and -write request
-  opb_slave_proc: process (OPB_Rst, OPB_Clk)
+  opb_slave_proc : process (OPB_Rst, OPB_Clk)
   begin
     if (OPB_Rst = '1') then
       -- OPB
@@ -249,8 +253,17 @@ begin  -- behavior
                     Sln_DBus_big_end(C_WIDTH_DMA_NUM-1 downto 0) <= opb_rx_dma_num_int;
                   end if;
 
+                when C_ADR_RX_CRC =>
+                  if C_CRC_EN then
+                    Sln_DBus_big_end(C_OPB_DWIDTH-1 downto C_SR_WIDTH) <= (others => '0');
+                    Sln_DBus_big_end(C_SR_WIDTH-1 downto 0)            <= opb_rx_crc_value;
+                  end if;
                   
-                  
+                when C_ADR_TX_CRC =>
+                  if C_CRC_EN then
+                    Sln_DBus_big_end(C_OPB_DWIDTH-1 downto C_SR_WIDTH) <= (others => '0');
+                    Sln_DBus_big_end(C_SR_WIDTH-1 downto 0)            <= opb_tx_crc_value;
+                  end if;
                 when others =>
                   null;
               end case;
