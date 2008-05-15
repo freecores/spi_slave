@@ -14,5 +14,8 @@ lib opb_spi_slave_v1_00_a fifo_prog_flags vhdl
 lib opb_spi_slave_v1_00_a irq_ctl vhdl
 lib opb_spi_slave_v1_00_a opb_m_if vhdl
 lib opb_spi_slave_v1_00_a opb_if vhdl
-lib opb_spi_slave_v1_00_a opb_spi_slave vhdl
+lib opb_spi_slave_v1_00_a PCK_CRC32_D32.vhd vhdl
+lib opb_spi_slave_v1_00_a crc_gen.vhd vhdl
 lib opb_spi_slave_v1_00_a ram vhdl
+lib opb_spi_slave_v1_00_a opb_spi_slave vhdl
+
