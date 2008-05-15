@@ -39,11 +39,7 @@ architecture behavior of crc_core is
 
   signal rx_crc_en : std_logic;
   signal tx_crc_en : std_logic;
-  
-  type state_define is (idle,
-                        insert_crc,
-                        wait_last_block);
-  signal state : state_define;
+
 
   signal cnt : integer range 0 to 15;
   
@@ -87,48 +83,20 @@ begin  -- behavior
   begin
     if (rst = '1') then
       tx_crc_insert <= '0';
-      state         <= idle;
     elsif rising_edge(OPB_Clk) then
-      case state is
-        when idle=>
-          if (opb_m_last_block = '1' and crc_en = '1') then
-            cnt   <= 15;
-            state <= insert_crc;
-          else
-            tx_crc_insert <= '0';
-            state         <= idle;
-          end if;
-          
-        when insert_crc =>
-          if (opb_m_last_block = '0') then
-            -- receive
-            state <= idle;
-          elsif (cnt = 0) then
-            tx_crc_insert <= '1';
-            state         <= wait_last_block;
-          else
-            state <= insert_crc;
-            if (fifo_tx_en = '1') then
-              cnt <= cnt -1;
-            end if;
-
-          end if;
-
-        when wait_last_block =>
+      if (opb_m_last_block = '0') then
+        cnt <= 15;
+        tx_crc_insert <= '0';
+      elsif (fifo_tx_en = '1') then
+        if (cnt = 1) then
+          tx_crc_insert <= '1';
+          cnt           <= cnt -1;
+        elsif (cnt = 0) then
           tx_crc_insert <= '0';
-          if (opb_m_last_block = '0') then
-            state <= idle;
-          else
-            state <= wait_last_block;
-          end if;
-          
-        when others =>
-          state <= idle;
-      end case;
-
-
+        else
+          cnt <= cnt -1;
+        end if;
+      end if;
     end if;
-
   end process;
-  
 end behavior;
