@@ -30,6 +30,7 @@ end crc_gen;
 
 architecture rtl of crc_gen is
   signal crc_data_int : std_logic_vector(C_SR_WIDTH-1 downto 0);
+  signal crc_data_in_int : std_logic_vector(C_SR_WIDTH-1 downto 0);
   
 begin  -- crc_gen
   process(clk)
@@ -40,9 +41,9 @@ begin  -- crc_gen
       elsif (crc_en = '1') then
         case C_SR_WIDTH is
           when 32 =>
-            crc_data_int <= nextCRC32_D32(crc_data_in, crc_data_int);
+            crc_data_int <= nextCRC32_D32(crc_data_in_int, crc_data_int);
           when 8 =>
-            crc_data_int <= nextCRC8_D8(crc_data_in, crc_data_int);
+            crc_data_int <= nextCRC8_D8(crc_data_in_int, crc_data_int);
           when others =>
             -- no crc calculation
             crc_data_int <= (others => '0');
@@ -51,5 +52,25 @@ begin  -- crc_gen
     end if;
   end process;
 
-  crc_data_out <= crc_data_int;
+  process(crc_data_int)
+    begin
+      for i  in 0 to 7 loop
+          crc_data_out(24+7-i) <= not crc_data_int(i);
+          crc_data_out(16+7-i) <= not crc_data_int(8+i);
+          crc_data_out(8+7-i) <= not crc_data_int(16+i);
+          crc_data_out(7-i) <= not crc_data_int(24+i);
+      end loop;  -- i 
+    end process;
+
+  process(crc_data_in)
+    begin
+      for i  in 0 to 7 loop
+          crc_data_in_int(7-i) <= crc_data_in(i);
+          crc_data_in_int(8+7-i) <= crc_data_in(8+i);
+          crc_data_in_int(16+7-i) <= crc_data_in(16+i);
+          crc_data_in_int(24+7-i) <= crc_data_in(24+i);
+      end loop;  -- i 
+    end process;
+
+    
 end rtl;
