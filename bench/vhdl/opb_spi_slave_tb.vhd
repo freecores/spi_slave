@@ -6,7 +6,7 @@
 -- Author     : 
 -- Company    : 
 -- Created    : 2007-09-02
--- Last update: 2008-03-23
+-- Last update: 2008-05-15
 -- Platform   : 
 -- Standard   : VHDL'87
 -------------------------------------------------------------------------------
@@ -248,13 +248,13 @@ begin  -- behavior
         if (OPB_Transfer_Abort) then
           MOPB_errAck <= '1';
         else
-          if (conv_integer(M_ABus)>=16#24000000#) then
-          if (M_RNW = '1') then
-            -- read
-            OPB_DBus0(C_OPB_DWIDTH-C_SR_WIDTH to C_OPB_DWIDTH-1) <= "0000000000000000" & "00" & M_ABus(16 to C_OPB_DWIDTH-3);
+          if (conv_integer(M_ABus) >= 16#24000000#) then
+            if (M_RNW = '1') then
+              -- read
+              OPB_DBus0(C_OPB_DWIDTH-C_SR_WIDTH to C_OPB_DWIDTH-1) <= "0000000000000000" & "00" & M_ABus(16 to C_OPB_DWIDTH-3);
+            end if;
+            MOPB_xferAck <= not MOPB_xferAck;
           end if;
-          MOPB_xferAck <= not MOPB_xferAck;
-        end if;
 
         end if;
 
@@ -756,31 +756,31 @@ begin  -- behavior
       end loop;  -- i
 
       -- crc_block
-      for i in 16 to 30 loop
+      for i in 16 to 31 loop
         spi_transfer(conv_std_logic_vector(i, C_SR_WIDTH));
-        assert (conv_integer(spi_value_in) = i) report "DMA Transfer 1 read data failure" severity failure;
+        if (i = 16) then
+          assert (conv_integer(spi_value_in) = 16#e4ea78bf#) report "DMA-block CRC failure" severity failure;          
+        else
+          assert (conv_integer(spi_value_in) = i) report "DMA Transfer 1 read data failure" severity failure;
+        end if;
       end loop;  -- i
-
-      -- check CRC
-      spi_transfer(conv_std_logic_vector(31, C_SR_WIDTH));
-      assert (conv_integer(spi_value_in) = 16#eb99fa90#) report "TX CRC_Failure"  severity failure;
 
       -- wait until RX transfer done
       for i in 0 to 15 loop
-      opb_read(C_ADR_STATUS);
-      if (opb_read_data(SPI_SR_Bit_RX_DMA_Done) ='1') then
-        exit;
-      end if;
-      wait for 1 us;
+        opb_read(C_ADR_STATUS);
+        if (opb_read_data(SPI_SR_Bit_RX_DMA_Done) = '1') then
+          exit;
+        end if;
+        wait for 1 us;
       end loop;  -- i
 
       -- check TX CRC Register
       opb_read(C_ADR_TX_CRC);
-      assert (conv_integer(opb_read_data)=16#eb99fa90#) report "TX Register CRC Failure" severity failure;
-      
+      assert (conv_integer(opb_read_data) = 16#e4ea78bf#) report "TX Register CRC Failure" severity failure;
+
       -- check RX CRC Register
       opb_read(C_ADR_RX_CRC);
-      assert (conv_integer(opb_read_data)=16#eb99fa90#) report "RX Register CRC Failure" severity failure;      
+      assert (conv_integer(opb_read_data) = 16#e4ea78bf#) report "RX Register CRC Failure" severity failure;
 
       wait for 1 us;
     end if;
